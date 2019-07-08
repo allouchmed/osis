@@ -47,6 +47,7 @@ def get_scores_encoding_list(user, **kwargs):
 
     if is_program_manager:
         professor = tutor.find_by_id(tutor_id) if tutor_id else None
+        # FIXME Replace offer_year by education group year
         offers_year = [offer_year.find_by_id(offer_year_id)] if offer_year_id else \
                        list(offer_year.find_by_user(user, academic_yr=current_academic_year))
 
@@ -110,7 +111,7 @@ def find_related_registration_ids(scores_encoding_list):
     return {enrollment.learning_unit_enrollment.student.registration_id
             for enrollment in scores_encoding_list.enrollments}
 
-
+# FIXME Replace offer_year by education group year
 def find_related_offer_years(scores_encoding_list):
     return {enrollment.learning_unit_enrollment.offer_enrollment.offer_year
             for enrollment in scores_encoding_list.enrollments}
@@ -274,6 +275,7 @@ class ScoresEncodingList:
         return list(filter(lambda e: e.is_final, self.enrollments))
 
 
+# FIXME Replace offer_year by education group year
 def sort_encodings(exam_enrollments):
     """
     Sort the list by

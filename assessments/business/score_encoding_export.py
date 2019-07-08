@@ -55,6 +55,7 @@ def export_xls(exam_enrollments):
     row_number = 12
     for exam_enroll in exam_enrollments:
         student = exam_enroll.learning_unit_enrollment.student
+        # FIXME Replace offer_year by education group year
         offer = exam_enroll.learning_unit_enrollment.offer
         person = mdl.person.find_by_id(student.person.id)
         end_date = __get_session_exam_deadline(exam_enroll)
@@ -68,6 +69,7 @@ def export_xls(exam_enrollments):
 
         justification = JUSTIFICATION_ALIASES.get(exam_enroll.justification_final, "")
 
+        # FIXME Replace offer_year acronym by education group year partial acronym
         worksheet.append([str(exam_enroll.learning_unit_enrollment.learning_unit_year.academic_year),
                           str(exam_enroll.session_exam.number_session),
                           exam_enroll.session_exam.learning_unit_year.acronym,

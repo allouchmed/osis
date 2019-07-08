@@ -165,6 +165,7 @@ def __save_xls_scores(request, file_name, learning_unit_year_id):
 
     score_list = _get_score_list_filtered_by_enrolled_state(learning_unit_year_id, request.user)
 
+    # FIXME Replace offer_year acronym  by education group year acronym
     offer_acronyms_managed_by_user = {offer_year.acronym for offer_year
                                       in score_encoding_list.find_related_offer_years(score_list)}
     learn_unit_acronyms_managed_by_user = {learning_unit_year.acronym for learning_unit_year

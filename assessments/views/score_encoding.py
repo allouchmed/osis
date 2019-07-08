@@ -157,6 +157,7 @@ def scores_encoding(request):
 
         all_tutors = score_encoding_progress.find_related_tutors(request.user, academic_yr, number_session)
 
+        # FIXME Replace offer_year by education group year
         all_offers = mdl.offer_year.find_by_user(request.user, academic_yr=academic_yr)
 
         if not score_encoding_progress_list:
@@ -453,6 +454,7 @@ def get_offer_years_from_enrollments(enrollments):
 def __send_message_for_offer_year(all_enrollments, learning_unit_year, offer_year):
     enrollments = filter_enrollments_by_offer_year(all_enrollments, offer_year)
     progress = mdl.exam_enrollment.calculate_exam_enrollment_progress(enrollments)
+    # FIXME Replace offer_year  acronym by education group year partial acronym
     offer_acronym = offer_year.acronym
     sent_error_message = None
     if progress == 100:
@@ -464,6 +466,7 @@ def __send_message_for_offer_year(all_enrollments, learning_unit_year, offer_yea
 
 
 def filter_enrollments_by_offer_year(enrollments, offer_year):
+    # FIXME Replace offer_year by education group year
     filtered_enrollments = filter(
         lambda enrollment: enrollment.learning_unit_enrollment.offer_enrollment.offer_year == offer_year,
         enrollments
@@ -561,6 +564,7 @@ def _get_specific_criteria_context(request):
     justification = post_data.get('justification')
     offer_year_id = post_data.get('program')
     current_academic_year = mdl.academic_year.current_academic_year()
+    # FIXME Replace offer_year by education group year
     offers_year_managed = mdl.offer_year.find_by_user(request.user, current_academic_year)
     is_program_manager = mdl.program_manager.is_program_manager(request.user)
 

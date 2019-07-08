@@ -30,6 +30,7 @@ from assessments.models.score_sheet_address import ScoreSheetAddress
 from reference.models.country import Country
 
 
+# FIXME Replace offer_year by education group year
 class ScoreSheetAddressForm(forms.ModelForm):
     country = forms.ModelChoiceField(queryset=Country.objects.all(), required=False, label=gettext_lazy('Country'))
     recipient = forms.CharField(max_length=255, label=gettext_lazy('Recipient'))

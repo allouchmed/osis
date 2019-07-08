@@ -83,6 +83,7 @@ def get_map_entity_with_offer_year_entity_type(off_year):
     return {value: key for key, value in _get_map_offer_year_entity_type_with_entity(off_year).items()}
 
 
+# FIXME Replace offer_year by education group year
 def save_address_from_entity(off_year, entity_version_id_selected, email):
     entity_id = entity_version.find_by_id(entity_version_id_selected).entity_id
     entity_id_mapped_with_type = get_map_entity_with_offer_year_entity_type(off_year)
@@ -96,6 +97,7 @@ def save_address_from_entity(off_year, entity_version_id_selected, email):
     new_address.save()
 
 
+# FIXME Replace offer_year by education group year
 def get_entity_version_choices(offer_year):
     entity_versions = entity_version_business.find_from_offer_year(offer_year)
     return set(entity_versions + [entity_version.get_last_version(ent.parent) for ent in entity_versions])
@@ -154,6 +156,7 @@ def scores_sheet_data(exam_enrollments, tutor=None):
         # Will contain lists of examEnrollments by offerYear (=Program)
         enrollments_by_program = {}  # {<offer_year_id> : [<ExamEnrollment>]}
         for exam_enroll in exam_enrollments:
+            # FIXME Replace offer_year by education group year
             key = exam_enroll.learning_unit_enrollment.offer_enrollment.offer_year.id
             if key not in enrollments_by_program.keys():
                 enrollments_by_program[key] = [exam_enroll]
@@ -162,6 +165,7 @@ def scores_sheet_data(exam_enrollments, tutor=None):
 
         for list_enrollments in enrollments_by_program.values():  # exam_enrollments by OfferYear
             exam_enrollment = list_enrollments[0]
+            # FIXME Replace offer_year by education group year
             off_year = exam_enrollment.learning_unit_enrollment.offer_enrollment.offer_year
             number_session = exam_enrollment.session_exam.number_session
             deliberation_date = session_exam_calendar.find_deliberation_date(number_session, off_year)
@@ -170,6 +174,7 @@ def scores_sheet_data(exam_enrollments, tutor=None):
             else:
                 deliberation_date = _('Not passed')
 
+            # FIXME Replace offer_year by education group year
             program = {'acronym': exam_enrollment.learning_unit_enrollment.offer_enrollment.offer_year.acronym,
                        'deliberation_date': deliberation_date,
                        'address': _get_serialized_address(off_year)}

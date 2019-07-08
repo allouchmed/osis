@@ -58,6 +58,7 @@ def offer_score_encoding_tab(request, offer_year_id):
 
 
 def _get_common_context(request, offer_year_id):
+    # FIXME Replace offer_year by education group year
     offer_year = get_object_or_none(OfferYear, pk=offer_year_id)
     return {
         'offer_year': offer_year,

@@ -61,6 +61,7 @@ class ProgramManagerListView(ListView):
         if not offer_years:
             return qs.none()
 
+        # FIXME Replace offer_year by education group year
         return qs.filter(offer_year__in=offer_years).order_by(
             'person__last_name', 'person__first_name', 'pk'
         ).select_related('person', 'offer_year__academic_year')
@@ -85,6 +86,7 @@ class ProgramManagerMixin(UserPassesTestMixin, AjaxTemplateMixin):
     def test_func(self):
         return is_entity_manager(self.request.user)
 
+    # FIXME Replace property offer_years by property education group years
     @property
     def offer_years(self) -> list:
         return self.request.GET['offer_year'].split(',')
@@ -109,6 +111,7 @@ class ProgramManagerDeleteView(ProgramManagerMixin, DeleteView):
 class ProgramManagerPersonDeleteView(ProgramManagerMixin, DeleteView):
     template_name = 'admin/programmanager_confirm_delete_inner.html'
 
+    # FIXME Replace offer_year by education group year
     def get_object(self, queryset=None):
         return self.model.objects.filter(
             person__pk=self.kwargs['pk'],
@@ -121,6 +124,7 @@ class ProgramManagerPersonDeleteView(ProgramManagerMixin, DeleteView):
             obj.delete()
         return self._ajax_response() or HttpResponseRedirect(self.get_success_url())
 
+    # FIXME Replace offer_year by education group year
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         manager = Person.objects.get(pk=self.kwargs['pk'])
@@ -174,6 +178,7 @@ class ProgramManagerCreateView(ProgramManagerMixin, FormView):
         context['offer_years'] = self.request.GET['offer_year']
         return context
 
+    # FIXME Replace offer_year by education group year
     def form_valid(self, form):
         offer_years = OfferYear.objects.filter(pk__in=self.offer_years)
 

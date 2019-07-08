@@ -115,6 +115,7 @@ def _find_by_reference(off_year_calendar, reference):
         result = _get_oyc_by_reference(off_year_calendar, reference)
     if not result:
         msg = "No OfferYearCalendar '{}' found for offerYear = {}"
+        # FIXME Replace offer_year by education group year
         if off_year_calendar.offer_year:
             logger.warning(msg.format(ac_type.DELIBERATION, off_year_calendar.offer_year.acronym))
     return result
@@ -124,6 +125,7 @@ def _get_oyc_by_reference(off_year_calendar, reference):
     number_session = session_exam_calendar.get_number_session_by_academic_calendar(off_year_calendar.academic_calendar)
     if number_session:
         try:
+            # FIXME Replace offer_year by education group year
             return offer_year_calendar.search(education_group_year=off_year_calendar.education_group_year,
                                               offer_year=off_year_calendar.offer_year,
                                               academic_calendar_reference=reference,
@@ -136,6 +138,7 @@ def _get_list_sessions_exam_deadlines(academic_calendar, offer_year):
     session_exam_deadlines = []
     number_session = session_exam_calendar.get_number_session_by_academic_calendar(academic_calendar)
     if number_session:
+        # FIXME Replace offer_year by education group year
         session_exam_deadlines = SessionExamDeadline.objects.filter(
             offer_enrollment__offer_year=offer_year, number_session=number_session)
     else:
