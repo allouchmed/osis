@@ -40,8 +40,7 @@ class SessionExam(models.Model):
     changed = models.DateTimeField(null=True, auto_now=True)
     number_session = models.IntegerField(choices=number_session.NUMBERS_SESSION)
     learning_unit_year = models.ForeignKey('LearningUnitYear', on_delete=models.CASCADE)
-    education_group_year = models.ForeignKey('EducationGroupYear', blank=True, null=True, on_delete=models.CASCADE,
-                                             null=True)
+    education_group_year = models.ForeignKey('EducationGroupYear', blank=True, null=True, on_delete=models.CASCADE)
     offer_year = models.ForeignKey('OfferYear', blank=True, null=True, on_delete=models.CASCADE)
     progress = None
 
