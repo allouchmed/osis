@@ -43,7 +43,6 @@ class ProgramManager(models.Model):
     external_id = models.CharField(max_length=100, blank=True, null=True, db_index=True)
     changed = models.DateTimeField(null=True, auto_now=True)
     person = models.ForeignKey('Person', on_delete=models.CASCADE, verbose_name=gettext_lazy("person"))
-    education_group_year = models.ForeignKey('EducationGroupYear', on_delete=models.CASCADE)
     offer_year = models.ForeignKey('OfferYear', on_delete=models.CASCADE)
     education_group = models.ForeignKey(EducationGroup, on_delete=models.CASCADE)
     is_main = models.BooleanField(default=False, verbose_name=gettext_lazy('Main'))

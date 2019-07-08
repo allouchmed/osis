@@ -41,7 +41,7 @@ class ScoreSheetAddressAdmin(OsisModelAdmin):
 class ScoreSheetAddress(models.Model):
     external_id = models.CharField(max_length=100, blank=True, null=True, db_index=True)
     changed = models.DateTimeField(null=True, auto_now=True)
-    education_group_year = models.OneToOneField('base.EducationGroupYear', on_delete=models.CASCADE)
+    education_group_year = models.OneToOneField('base.EducationGroupYear', on_delete=models.CASCADE, null=True)
     offer_year = models.OneToOneField('base.OfferYear', on_delete=models.CASCADE)
     # Info to find the address
     entity_address_choice = models.CharField(max_length=50, blank=True, null=True,
