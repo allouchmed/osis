@@ -40,6 +40,7 @@ class SessionExam(models.Model):
     changed = models.DateTimeField(null=True, auto_now=True)
     number_session = models.IntegerField(choices=number_session.NUMBERS_SESSION)
     learning_unit_year = models.ForeignKey('LearningUnitYear', on_delete=models.CASCADE)
+    # FIXME Add education group year foreignkey
     offer_year = models.ForeignKey('OfferYear', blank=True, null=True, on_delete=models.CASCADE)
     progress = None
 
