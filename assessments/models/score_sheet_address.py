@@ -38,10 +38,10 @@ class ScoreSheetAddressAdmin(OsisModelAdmin):
     raw_id_fields = ('offer_year',)
 
 
-# FIXME Add education group year foreign key
 class ScoreSheetAddress(models.Model):
     external_id = models.CharField(max_length=100, blank=True, null=True, db_index=True)
     changed = models.DateTimeField(null=True, auto_now=True)
+    education_group_year = models.OneToOneField('base.EducationGroupYear', on_delete=models.CASCADE)
     offer_year = models.OneToOneField('base.OfferYear', on_delete=models.CASCADE)
     # Info to find the address
     entity_address_choice = models.CharField(max_length=50, blank=True, null=True,
