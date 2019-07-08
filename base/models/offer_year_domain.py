@@ -34,11 +34,11 @@ class OfferYearDomainAdmin(SerializableModelAdmin):
     search_fields = ['domain__name', 'offer_year__acronym']
 
 
+# FIXME Replace by education group year domain
 class OfferYearDomain(SerializableModel):
     external_id = models.CharField(max_length=100, blank=True, null=True, db_index=True)
     changed = models.DateTimeField(null=True, auto_now=True)
     domain = models.ForeignKey('reference.Domain', on_delete=models.CASCADE)
-    # FIXME Add education group year foreignkey
     offer_year = models.ForeignKey('base.OfferYear', blank=True, null=True, on_delete=models.CASCADE)
 
     def __str__(self):
