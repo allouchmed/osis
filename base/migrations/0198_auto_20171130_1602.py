@@ -6,6 +6,7 @@ from django.db import migrations, utils
 from django.db import transaction
 
 
+# FIXME Delete migration
 def copy_previous_pgrm_to_current_lunit(apps, model):
     base = apps.get_app_config('base')
     ProgramManager = base.get_model('programmanager')

@@ -58,6 +58,10 @@ class LearningUnitEnrollment(SerializableModel):
     def offer(self):
         return self.offer_enrollment.offer_year
 
+    @property
+    def education_group_year(self):
+        return self.offer_enrollment.education_group_year
+
     def __str__(self):
         return u"%s - %s" % (self.learning_unit_year, self.offer_enrollment.student)
 
