@@ -26,12 +26,14 @@
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
 from base.models import offer, program_manager, academic_year
+from base.models.education_group_year import EducationGroupYear
 from osis_common.models.serializable_model import SerializableModel, SerializableModelAdmin
 
 
 class OfferYearAdmin(SerializableModelAdmin):
     list_display = ('acronym', 'title', 'academic_year', 'offer', 'parent', 'offer_type', 'changed')
-    list_filter = ('academic_year', 'grade', 'offer_type', 'campus')
+    list_filter = ('academic_year', 'grade', 'offer_type')
+    raw_id_fields = ('academic_year', 'offer', 'parent', 'campus')
     search_fields = ['acronym']
 
 
@@ -172,9 +174,10 @@ def find_by_user(user, academic_yr=None):
     """
     if not academic_yr:
         academic_yr = academic_year.current_academic_year()
-    program_manager_queryset = program_manager.find_by_user(user, academic_year=academic_yr)
-    offer_year_ids = program_manager_queryset.values_list('offer_year', flat=True).distinct('offer_year')
-    return OfferYear.objects.filter(pk__in=offer_year_ids).order_by('acronym')
+    return EducationGroupYear.objects.filter(
+        academic_year=academic_yr,
+        education_group__programmanager__person__user=user
+    ).order_by('acronym')
 
 
 def get_last_offer_year_by_offer(an_offer):
