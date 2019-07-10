@@ -112,9 +112,8 @@ def find_related_registration_ids(scores_encoding_list):
             for enrollment in scores_encoding_list.enrollments}
 
 
-# FIXME Replace offer_year by education group year
-def find_related_offer_years(scores_encoding_list):
-    return {enrollment.learning_unit_enrollment.offer_enrollment.offer_year
+def find_related_education_group_years(scores_encoding_list):
+    return {enrollment.learning_unit_enrollment.offer_enrollment.education_group_year
             for enrollment in scores_encoding_list.enrollments}
 
 
