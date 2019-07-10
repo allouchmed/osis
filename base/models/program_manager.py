@@ -87,14 +87,13 @@ def is_program_manager(user, offer_year=None, learning_unit_year=None, education
     if user.has_perm('base.is_administrator'):
         return True
 
-    # FIXME Use education group instead
     if offer_year:
-        return ProgramManager.objects.filter(person__user=user, offer_year=offer_year).exists()
+        return ProgramManager.objects.filter(person__user=user, education_group__educationgroupyear=offer_year).exists()
     elif learning_unit_year:
         # FIXME Use education group instead
-        offers_user = ProgramManager.objects.filter(person__user=user).values('offer_year')
+        offers_user = ProgramManager.objects.filter(person__user=user).values('education_group')
         return LearningUnitEnrollment.objects.filter(learning_unit_year=learning_unit_year) \
-            .filter(offer_enrollment__offer_year__in=offers_user).exists()
+            .filter(offer_enrollment__education_group_year__education_group__in=offers_user).exists()
     elif education_group:
         return ProgramManager.objects.filter(person__user=user, education_group=education_group).exists()
     else:

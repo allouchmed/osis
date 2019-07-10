@@ -97,9 +97,8 @@ def save_address_from_entity(off_year, entity_version_id_selected, email):
     new_address.save()
 
 
-# FIXME Replace offer_year by education group year
-def get_entity_version_choices(offer_year):
-    entity_versions = entity_version_business.find_from_offer_year(offer_year)
+def get_entity_version_choices(education_group_year):
+    entity_versions = entity_version_business.find_from_education_group_year(education_group_year)
     return set(entity_versions + [entity_version.get_last_version(ent.parent) for ent in entity_versions])
 
 

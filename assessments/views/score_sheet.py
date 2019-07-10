@@ -36,6 +36,7 @@ from assessments.forms import score_sheet_address_entity
 from assessments.forms.score_sheet_address import ScoreSheetAddressForm
 from assessments.models import score_sheet_address as score_sheet_address_model
 from base import models as mdl
+from base.models.education_group_year import EducationGroupYear
 from base.models.offer_year import OfferYear
 from base.models.utils.utils import get_object_or_none
 from reference.models.country import Country
@@ -58,13 +59,12 @@ def offer_score_encoding_tab(request, offer_year_id):
 
 
 def _get_common_context(request, offer_year_id):
-    # FIXME Replace offer_year by education group year
-    offer_year = get_object_or_none(OfferYear, pk=offer_year_id)
+    egy = get_object_or_none(EducationGroupYear, pk=offer_year_id)
     return {
-        'offer_year': offer_year,
+        'offer_year': egy,
         'countries': Country.objects.all(),
-        'is_program_manager': mdl.program_manager.is_program_manager(request.user, offer_year=offer_year),
-        'entity_versions': score_encoding_sheet.get_entity_version_choices(offer_year),
+        'is_program_manager': mdl.program_manager.is_program_manager(request.user, offer_year=egy),
+        'entity_versions': score_encoding_sheet.get_entity_version_choices(egy),
     }
 
 

@@ -30,10 +30,9 @@ SERVICE_COURSE = 'SERVICE_COURSE'
 PARENT_FACULTY = 'PARENT_FACULTY'
 
 
-def find_from_offer_year(offer_year):
-    # FIXME Use egy instead
+def find_from_education_group_year(egy):
     return [entity_version.get_last_version(off_year_entity.entity)
-            for off_year_entity in offer_year_entity.search(offer_year=offer_year).distinct('entity')]
+            for off_year_entity in offer_year_entity.search(education_group_year=egy).distinct('entity')]
 
 
 def find_entity_version_according_academic_year(entity_versions, academic_year):
