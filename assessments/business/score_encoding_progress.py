@@ -146,7 +146,7 @@ class ScoreEncodingProgress:
                    )
         )
 
-        self.offer_year_id = kwargs.get('learning_unit_enrollment__offer_enrollment__offer_year')
+        self.offer_year_id = kwargs.get('learning_unit_enrollment__offer_enrollment__education_group_year')
         self.exam_enrollments_encoded = kwargs.get('exam_enrollments_encoded')
         self.scores_not_yet_submitted = kwargs.get('scores_not_yet_submitted')
         self.total_exam_enrollments = kwargs.get('total_exam_enrollments')

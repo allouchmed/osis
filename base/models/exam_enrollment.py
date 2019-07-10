@@ -289,7 +289,7 @@ def get_progress_by_learning_unit_years_and_offer_years(user,
                                         only_enrolled=only_enrolled)
 
     return queryset.values('session_exam', 'learning_unit_enrollment__learning_unit_year',
-                           'learning_unit_enrollment__offer_enrollment__offer_year') \
+                           'learning_unit_enrollment__offer_enrollment__education_group_year') \
         .annotate(
         total_exam_enrollments=Count('id'),
         learning_unit_enrollment__learning_unit_year__acronym=
@@ -368,10 +368,10 @@ def find_for_score_encodings(session_exam_number,
 
     if offer_year_id:
         # FIXME Use egy instead
-        queryset = queryset.filter(learning_unit_enrollment__offer_enrollment__offer_year_id=offer_year_id)
+        queryset = queryset.filter(learning_unit_enrollment__offer_enrollment__education_group_year_id=offer_year_id)
     elif offers_year:
         # FIXME Use egy instead
-        queryset = queryset.filter(learning_unit_enrollment__offer_enrollment__offer_year_id__in=offers_year)
+        queryset = queryset.filter(learning_unit_enrollment__offer_enrollment__education_group_year_id__in=offers_year)
 
     if with_justification_or_score_final:
         queryset = queryset.exclude(score_final=None, justification_final=None)
