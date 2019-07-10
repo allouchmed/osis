@@ -40,7 +40,7 @@ def get_scores_encoding_progress(user, offer_year_id, number_session, academic_y
 
 
 # FIXME Replace offer_year by education group year
-def find_related_offer_years(score_encoding_progress_list):
+def find_related_education_group_years(score_encoding_progress_list):
     all_offers_ids = [score_encoding_progress.offer_year_id for score_encoding_progress in score_encoding_progress_list]
     return EducationGroupYear.objects.filter(pk__in=all_offers_ids)
 
@@ -51,12 +51,19 @@ def find_related_tutors(user, academic_year, session_exam_number):
     # FIXME Use egy instead
     offer_year_ids = list(offer_year.find_by_user(user).values_list('id', flat=True))
 
-    learning_unit_year_ids = list(exam_enrollment.find_for_score_encodings(session_exam_number=session_exam_number,
-                                                                      academic_year=academic_year,
-                                                                      offers_year=offer_year_ids,
-                                                                      with_session_exam_deadline=False)\
-                                            .distinct('learning_unit_enrollment__learning_unit_year')\
-                                            .values_list('learning_unit_enrollment__learning_unit_year_id', flat=True))
+    learning_unit_year_ids = list(
+        exam_enrollment.find_for_score_encodings(
+            session_exam_number=session_exam_number,
+            academic_year=academic_year,
+            offers_year=offer_year_ids,
+            with_session_exam_deadline=False
+        ).distinct(
+            'learning_unit_enrollment__learning_unit_year'
+        ).values_list(
+            'learning_unit_enrollment__learning_unit_year_id',
+            flat=True
+        )
+    )
 
     tutors = tutor.find_by_learning_unit(learning_unit_year_ids)
     return sorted(tutors, key=_order_by_last_name_and_first_name)

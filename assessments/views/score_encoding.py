@@ -180,7 +180,7 @@ def scores_encoding(request):
             academic_year=academic_yr
         )
         # FIXME Replace offer_year by education group year
-        all_offers = score_encoding_progress.find_related_offer_years(score_encoding_progress_list)
+        all_offers = score_encoding_progress.find_related_education_group_years(score_encoding_progress_list)
 
         context.update({'tutor': tutor,
                         'offer_year_list': all_offers,
