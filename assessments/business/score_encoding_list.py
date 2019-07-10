@@ -39,7 +39,7 @@ def get_scores_encoding_list(user, **kwargs):
     current_number_session = session_exam_calendar.find_session_exam_number()
     is_program_manager = program_manager.is_program_manager(user)
     learning_unit_year_id = kwargs.get('learning_unit_year_id')
-    offer_year_id = kwargs.get('offer_year_id')
+    egy_id = kwargs.get('offer_year_id')
     tutor_id = kwargs.get('tutor_id')
     enrollments_ids = kwargs.get('enrollments_ids')
     justification = kwargs.get('justification')
@@ -48,15 +48,15 @@ def get_scores_encoding_list(user, **kwargs):
     if is_program_manager:
         professor = tutor.find_by_id(tutor_id) if tutor_id else None
         # FIXME Replace offer_year by education group year
-        offers_year = [offer_year.find_by_id(offer_year_id)] if offer_year_id else \
-                       list(offer_year.find_by_user(user, academic_yr=current_academic_year))
+        egys = [offer_year.find_by_id(egy_id)] if egy_id else \
+            list(offer_year.find_by_user(user, academic_yr=current_academic_year))
 
         enrollments = exam_enrollment.find_for_score_encodings(
             academic_year=current_academic_year,
             session_exam_number=current_number_session,
             learning_unit_year_id=learning_unit_year_id,
             tutor=professor,
-            offers_year=offers_year,
+            offers_year=egys,
             registration_id=kwargs.get('registration_id'),
             student_last_name=kwargs.get('student_last_name'),
             student_first_name=kwargs.get('student_first_name'),
@@ -224,8 +224,8 @@ def can_modify_exam_enrollment(enrollment, is_program_manager):
         return not is_deadline_reached(enrollment)
 
     return not is_deadline_reached(enrollment, False) and \
-           not enrollment.score_final and not enrollment.justification_final and \
-           enrollment.justification_encoded != exam_enrollment_justification_type.ABSENCE_JUSTIFIED
+        not enrollment.score_final and not enrollment.justification_final and \
+        enrollment.justification_encoded != exam_enrollment_justification_type.ABSENCE_JUSTIFIED
 
 
 def is_deadline_reached(enrollment, is_program_manager=True):
@@ -244,7 +244,7 @@ def set_score_and_justification(enrollment, is_program_manager):
         enrollment.score_final = enrollment.score_encoded
         enrollment.justification_final = enrollment.justification_encoded
 
-    #Validation
+    # Validation
     enrollment.full_clean()
     enrollment.save()
 
@@ -289,7 +289,7 @@ def sort_encodings(exam_enrollments):
     def _sort(key):
         learn_unit_acronym = key.learning_unit_enrollment.learning_unit_year.acronym
         off_enroll = key.learning_unit_enrollment.offer_enrollment
-        acronym = off_enroll.offer_year.acronym
+        acronym = off_enroll.education_group_year.acronym
         last_name = off_enroll.student.person.last_name
         first_name = off_enroll.student.person.first_name
         last_name = _normalize_string(last_name) if last_name else None
