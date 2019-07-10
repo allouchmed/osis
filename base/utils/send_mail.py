@@ -70,7 +70,7 @@ def send_mail_after_scores_submission(persons, learning_unit_name, submitted_enr
     header_txt = ['acronym', 'session_title', 'registration_number', 'lastname', 'firstname', 'score', 'documentation']
     submitted_enrollments_data = [
         (
-            enrollment.learning_unit_enrollment.offer_enrollment.offer_year.acronym, # FIXME Use egy instead
+            enrollment.learning_unit_enrollment.offer_enrollment.education_group_year.acronym,
             enrollment.session_exam.number_session,
             enrollment.learning_unit_enrollment.offer_enrollment.student.registration_id,
             enrollment.learning_unit_enrollment.offer_enrollment.student.person.last_name,
@@ -300,13 +300,13 @@ def _build_worksheet_parameters(workbook, a_user, operation, research_criteria):
     return worksheet_parameters
 
 
-def send_message_after_all_encoded_by_manager(persons, enrollments, learning_unit_acronym, offer_acronym):
+def send_message_after_all_encoded_by_manager(persons, enrollments, learning_unit_acronym, egy_acronym):
     """
     Send a message to all tutor from a learning unit when all scores are submitted by program manager
     :param persons: The list of the tutor (person) of the learning unit
     :param enrollments: The enrollments that are encoded and submitted
     :param learning_unit_acronym The learning unit encoded
-    :param offer_acronym: The offer which is managed
+    :param egy_acronym: The offer which is managed
     :return: A message if an error occured, None if it's ok
     """
 
@@ -315,15 +315,15 @@ def send_message_after_all_encoded_by_manager(persons, enrollments, learning_uni
     receivers = [message_config.create_receiver(person.id, person.email, person.language) for person in persons]
     suject_data = {
         'learning_unit_acronym': learning_unit_acronym,
-        'offer_acronym': offer_acronym
+        'offer_acronym': egy_acronym
     }
     template_base_data = {
         'learning_unit_acronym': learning_unit_acronym,
-        'offer_acronym': offer_acronym,
+        'offer_acronym': egy_acronym,
     }
     enrollments_data = [
         (
-            enrollment.learning_unit_enrollment.offer_enrollment.offer_year.acronym,
+            enrollment.learning_unit_enrollment.offer_enrollment.education_group_year.acronym,
             enrollment.session_exam.number_session,
             enrollment.learning_unit_enrollment.offer_enrollment.student.registration_id,
             enrollment.learning_unit_enrollment.offer_enrollment.student.person.last_name,
