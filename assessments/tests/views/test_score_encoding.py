@@ -177,7 +177,7 @@ class OnlineEncodingTest(MixinSetupOnlineEncoding, TestCase):
 
         expected = [self.enrollments[0]]
         offer_year = self.enrollments[0].learning_unit_enrollment.offer_enrollment.offer_year
-        actual = score_encoding.filter_enrollments_by_offer_year(enrollments, offer_year)
+        actual = score_encoding.filter_enrollments_by_education_group_year(enrollments, offer_year)
 
         self.assertListEqual(expected, actual, "Should only return enrollments for the first offer year")
 

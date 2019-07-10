@@ -438,39 +438,39 @@ def __send_messages_for_each_offer_year(all_enrollments, learning_unit_year, upd
     :return: A list of error message if message cannot be sent
     """
     sent_error_messages = []
-    offer_years = get_offer_years_from_enrollments(updated_enrollments)
-    for offer_year in offer_years:
-        sent_error_message = __send_message_for_offer_year(all_enrollments, learning_unit_year,
-                                                           offer_year)
+    egys = get_education_group_years_from_enrollments(updated_enrollments)
+    for egy in egys:
+        sent_error_message = __send_message_for_education_group_year(all_enrollments, learning_unit_year, egy)
         if sent_error_message:
             sent_error_messages.append(sent_error_message)
     return sent_error_messages
 
 
-def get_offer_years_from_enrollments(enrollments):
-    # FIXME Use egy instead
-    list_offer_years = [enrollment.learning_unit_enrollment.offer_enrollment.offer_year for enrollment in enrollments]
-    return list(set(list_offer_years))
+def get_education_group_years_from_enrollments(enrollments):
+    list_egys = [enrollment.learning_unit_enrollment.offer_enrollment.education_group_year
+                 for enrollment in enrollments]
+    return list(set(list_egys))
 
 
-def __send_message_for_offer_year(all_enrollments, learning_unit_year, offer_year):
-    enrollments = filter_enrollments_by_offer_year(all_enrollments, offer_year)
+def __send_message_for_education_group_year(all_enrollments, learning_unit_year, egy):
+    enrollments = filter_enrollments_by_education_group_year(all_enrollments, egy)
     progress = mdl.exam_enrollment.calculate_exam_enrollment_progress(enrollments)
-    # FIXME Replace offer_year  acronym by education group year partial acronym
-    offer_acronym = offer_year.acronym
+    egy_acronym = egy.acronym
     sent_error_message = None
     if progress == 100:
         persons = list(set([tutor.person for tutor in mdl.tutor.find_by_learning_unit(learning_unit_year)]))
-        sent_error_message = send_mail.send_message_after_all_encoded_by_manager(persons, enrollments,
-                                                                                 learning_unit_year.acronym,
-                                                                                 offer_acronym)
+        sent_error_message = send_mail.send_message_after_all_encoded_by_manager(
+            persons,
+            enrollments,
+            learning_unit_year.acronym,
+            egy_acronym
+        )
     return sent_error_message
 
 
-def filter_enrollments_by_offer_year(enrollments, offer_year):
-    # FIXME Replace offer_year by education group year
+def filter_enrollments_by_education_group_year(enrollments, egy):
     filtered_enrollments = filter(
-        lambda enrollment: enrollment.learning_unit_enrollment.offer_enrollment.offer_year == offer_year,
+        lambda enrollment: enrollment.learning_unit_enrollment.offer_enrollment.education_group_year == egy,
         enrollments
     )
     return list(filtered_enrollments)
