@@ -917,6 +917,9 @@ class EducationGroupYear(SerializableModel):
             return self.education_group.educationgroupyear_set.get(academic_year__year=(self.academic_year.year - 1))
         except EducationGroupYear.DoesNotExist:
             return None
+    @propert
+    def equivalent_offer_year(self):
+        return OfferYear.objects.get(acronym=self.acronym, academic_year=self.academic_year)
 
 
 def search(**kwargs):

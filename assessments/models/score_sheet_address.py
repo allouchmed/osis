@@ -75,8 +75,8 @@ class ScoreSheetAddress(models.Model):
         return "{0} - {1}".format(self.offer_year, self.entity_address_choice)
 
 
-def get_from_offer_year(off_year):
+def get_from_education_group_year(egy):
     try:
-        return ScoreSheetAddress.objects.get(offer_year=off_year)  # FIXME Use egy instead
+        return ScoreSheetAddress.objects.get(education_group_year=egy)
     except ObjectDoesNotExist:
         return None

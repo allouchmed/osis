@@ -86,7 +86,7 @@ def save_score_sheet_address(request, offer_year_id):
 def _save_customized_address(request, offer_year_id):
     form = ScoreSheetAddressForm(
         request.POST,
-        instance=score_sheet_address_model.get_from_offer_year(offer_year_id)
+        instance=score_sheet_address_model.get_from_education_group_year(offer_year_id)
     )
     if form.is_valid():
         form.save()

@@ -35,10 +35,11 @@ from base.business import entity_version as entity_version_business
 from base.models.enums.person_address_type import PersonAddressType
 from assessments.business.enrollment_state import get_line_color
 from base.models.enums import exam_enrollment_state as enrollment_states
+from base.models.offer_year import OfferYear
 
 
 def get_score_sheet_address(off_year):
-    address = score_sheet_address.get_from_offer_year(off_year)
+    address = score_sheet_address.get_from_education_group_year(off_year)
     entity_id = None
     if address is None:
         address = off_year.id
@@ -83,15 +84,17 @@ def get_map_entity_with_offer_year_entity_type(off_year):
     return {value: key for key, value in _get_map_offer_year_entity_type_with_entity(off_year).items()}
 
 
-# FIXME Replace offer_year by education group year
-def save_address_from_entity(off_year, entity_version_id_selected, email):
+def save_address_from_entity(egy, entity_version_id_selected, email):
     entity_id = entity_version.find_by_id(entity_version_id_selected).entity_id
-    entity_id_mapped_with_type = get_map_entity_with_offer_year_entity_type(off_year)
+    entity_id_mapped_with_type = get_map_entity_with_offer_year_entity_type(egy)
     entity_address_choice = entity_id_mapped_with_type.get(entity_id)
-    new_address = score_sheet_address.ScoreSheetAddress(offer_year=off_year,
-                                                        entity_address_choice=entity_address_choice,
-                                                        email=email)
-    address = score_sheet_address.get_from_offer_year(off_year)
+    new_address = score_sheet_address.ScoreSheetAddress(
+        offer_year=egy.equivalent_offer_year,
+        education_group_year=egy,
+        entity_address_choice=entity_address_choice,
+        email=email
+    )
+    address = score_sheet_address.get_from_education_group_year(egy)
     if address:
         new_address.id = address.id
     new_address.save()
@@ -155,8 +158,7 @@ def scores_sheet_data(exam_enrollments, tutor=None):
         # Will contain lists of examEnrollments by offerYear (=Program)
         enrollments_by_program = {}  # {<offer_year_id> : [<ExamEnrollment>]}
         for exam_enroll in exam_enrollments:
-            # FIXME Replace offer_year by education group year
-            key = exam_enroll.learning_unit_enrollment.offer_enrollment.offer_year.id
+            key = exam_enroll.learning_unit_enrollment.offer_enrollment.education_group_year.id
             if key not in enrollments_by_program.keys():
                 enrollments_by_program[key] = [exam_enroll]
             else:
@@ -164,19 +166,20 @@ def scores_sheet_data(exam_enrollments, tutor=None):
 
         for list_enrollments in enrollments_by_program.values():  # exam_enrollments by OfferYear
             exam_enrollment = list_enrollments[0]
-            # FIXME Replace offer_year by education group year
-            off_year = exam_enrollment.learning_unit_enrollment.offer_enrollment.offer_year
+            egy = exam_enrollment.learning_unit_enrollment.offer_enrollment.education_group_year
             number_session = exam_enrollment.session_exam.number_session
-            deliberation_date = session_exam_calendar.find_deliberation_date(number_session, off_year)
+            deliberation_date = session_exam_calendar.find_deliberation_date(number_session, egy)
             if deliberation_date:
                 deliberation_date = deliberation_date.strftime(date_format)
             else:
                 deliberation_date = _('Not passed')
 
             # FIXME Replace offer_year by education group year
-            program = {'acronym': exam_enrollment.learning_unit_enrollment.offer_enrollment.offer_year.acronym,
-                       'deliberation_date': deliberation_date,
-                       'address': _get_serialized_address(off_year)}
+            program = {
+                'acronym': exam_enrollment.learning_unit_enrollment.offer_enrollment.education_group_year.acronym,
+                'deliberation_date': deliberation_date,
+                'address': _get_serialized_address(egy)
+            }
             enrollments = []
             for exam_enrol in list_enrollments:
                 student = exam_enrol.learning_unit_enrollment.student
