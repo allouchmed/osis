@@ -47,6 +47,7 @@ def find_related_offer_years(score_encoding_progress_list):
 # FIXME Replace offer_year by education group year
 def find_related_tutors(user, academic_year, session_exam_number):
     # Find all offer managed by current user
+    # FIXME Use egy instead
     offer_year_ids = list(offer_year.find_by_user(user).values_list('id', flat=True))
 
     learning_unit_year_ids = list(exam_enrollment.find_for_score_encodings(session_exam_number=session_exam_number,

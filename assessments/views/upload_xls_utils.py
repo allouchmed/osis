@@ -333,7 +333,7 @@ def _update_row(user, row, enrollments_managed_grouped, is_program_manager):
         raise UploadValueError("%s" % _("You can't encode a 'score' and a 'justification' together"), messages.ERROR)
 
     if xls_justification and _is_informative_justification(enrollment, xls_justification, is_program_manager):
-       return False
+        return False
 
     enrollment.score_encoded = xls_score
     enrollment.justification_encoded = None

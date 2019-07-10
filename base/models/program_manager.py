@@ -70,6 +70,7 @@ class ProgramManager(models.Model):
 
 
 def find_by_person(a_person):
+    # FIXME Use education group instead
     return ProgramManager.objects.select_related("offer_year").filter(person=a_person)
 
 
@@ -86,9 +87,11 @@ def is_program_manager(user, offer_year=None, learning_unit_year=None, education
     if user.has_perm('base.is_administrator'):
         return True
 
+    # FIXME Use education group instead
     if offer_year:
         return ProgramManager.objects.filter(person__user=user, offer_year=offer_year).exists()
     elif learning_unit_year:
+        # FIXME Use education group instead
         offers_user = ProgramManager.objects.filter(person__user=user).values('offer_year')
         return LearningUnitEnrollment.objects.filter(learning_unit_year=learning_unit_year) \
             .filter(offer_enrollment__offer_year__in=offers_user).exists()
@@ -98,6 +101,7 @@ def is_program_manager(user, offer_year=None, learning_unit_year=None, education
         return ProgramManager.objects.filter(person__user=user).exists()
 
 
+# FIXME Use education group instead
 def find_by_offer_year(offer_yr):
     return ProgramManager.objects.filter(offer_year=offer_yr) \
         .order_by('person__last_name', 'person__first_name')
@@ -106,6 +110,7 @@ def find_by_offer_year(offer_yr):
 def find_by_user(user, academic_year=None):
     queryset = ProgramManager.objects
     if academic_year:
+        # FIXME Use education group instead
         queryset = queryset.filter(offer_year__academic_year=academic_year)
 
     return queryset.filter(person__user=user)
@@ -113,6 +118,7 @@ def find_by_user(user, academic_year=None):
 
 def find_by_management_entity(administration_entity, academic_yr):
     if administration_entity and academic_yr:
+        # FIXME Use education group instead
         return ProgramManager.objects \
             .filter(offer_year__entity_management__in=administration_entity, offer_year__academic_year=academic_yr) \
             .select_related('person') \

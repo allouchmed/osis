@@ -31,6 +31,7 @@ PARENT_FACULTY = 'PARENT_FACULTY'
 
 
 def find_from_offer_year(offer_year):
+    # FIXME Use egy instead
     return [entity_version.get_last_version(off_year_entity.entity)
             for off_year_entity in offer_year_entity.search(offer_year=offer_year).distinct('entity')]
 

@@ -70,7 +70,7 @@ def send_mail_after_scores_submission(persons, learning_unit_name, submitted_enr
     header_txt = ['acronym', 'session_title', 'registration_number', 'lastname', 'firstname', 'score', 'documentation']
     submitted_enrollments_data = [
         (
-            enrollment.learning_unit_enrollment.offer_enrollment.offer_year.acronym,
+            enrollment.learning_unit_enrollment.offer_enrollment.offer_year.acronym, # FIXME Use egy instead
             enrollment.session_exam.number_session,
             enrollment.learning_unit_enrollment.offer_enrollment.student.registration_id,
             enrollment.learning_unit_enrollment.offer_enrollment.student.person.last_name,

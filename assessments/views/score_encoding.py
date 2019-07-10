@@ -447,6 +447,7 @@ def __send_messages_for_each_offer_year(all_enrollments, learning_unit_year, upd
 
 
 def get_offer_years_from_enrollments(enrollments):
+    # FIXME Use egy instead
     list_offer_years = [enrollment.learning_unit_enrollment.offer_enrollment.offer_year for enrollment in enrollments]
     return list(set(list_offer_years))
 

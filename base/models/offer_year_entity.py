@@ -75,6 +75,6 @@ def search(**kwargs):
 
 def get_from_offer_year_and_type(offer_year, education_group_type):
     try:
-        return OfferYearEntity.objects.get(offer_year=offer_year, type=education_group_type)
+        return OfferYearEntity.objects.get(offer_year=offer_year, type=education_group_type)  # FIXME Use egy instead
     except ObjectDoesNotExist:
         return None

@@ -272,6 +272,7 @@ def get_progress_by_learning_unit_years_and_offer_years(user,
     if offer_year_id:
         offer_year_ids = [offer_year_id]
     else:
+        # FIXME Use egy instead
         offer_year_ids = offer_year.find_by_user(user).values_list('id', flat=True)
 
     tutor_user = None
@@ -366,8 +367,10 @@ def find_for_score_encodings(session_exam_number,
             queryset = queryset.filter(learning_unit_enrollment__learning_unit_year_id__in=learning_unit_years)
 
     if offer_year_id:
+        # FIXME Use egy instead
         queryset = queryset.filter(learning_unit_enrollment__offer_enrollment__offer_year_id=offer_year_id)
     elif offers_year:
+        # FIXME Use egy instead
         queryset = queryset.filter(learning_unit_enrollment__offer_enrollment__offer_year_id__in=offers_year)
 
     if with_justification_or_score_final:

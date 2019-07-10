@@ -77,6 +77,6 @@ class ScoreSheetAddress(models.Model):
 
 def get_from_offer_year(off_year):
     try:
-        return ScoreSheetAddress.objects.get(offer_year=off_year)
+        return ScoreSheetAddress.objects.get(offer_year=off_year)  # FIXME Use egy instead
     except ObjectDoesNotExist:
         return None
