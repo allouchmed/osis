@@ -659,11 +659,11 @@ class FunctionalTest(SeleniumTestCase, BusinessMixin):
             language='fr-be'
         )
 
-        offer_year_factory = functools.partial(OfferYearFactory, academic_year=academic_year)
+        education_group_year_factory = functools.partial(EducationGroupYearFactory, academic_year=academic_year)
 
         acronyms = ['PHYS11BA', 'ECON2M1', 'PHYS1BA', 'PHYS2M1', 'PHYS2MA']
-        offers = {
-            acronym: offer_year_factory(acronym=acronym)
+        egys = {
+            acronym: education_group_year_factory(acronym=acronym)
             for acronym in acronyms
         }
 
@@ -671,8 +671,8 @@ class FunctionalTest(SeleniumTestCase, BusinessMixin):
             ProgramManagerFactory, person=person
         )
 
-        for acronym, offer_year in offers.items():
-            program_manager_factory(offer_year=offer_year)
+        for acronym, egy in egys.items():
+            program_manager_factory(education_group=egy.education_group)
 
         student1 = StudentFactory()
         student2 = StudentFactory()
@@ -686,20 +686,20 @@ class FunctionalTest(SeleniumTestCase, BusinessMixin):
         student15 = StudentFactory()
         student16 = StudentFactory()
 
-        offer_enrollment1 = OfferEnrollmentFactory(offer_year=offers['PHYS11BA'], student=student1)
-        offer_enrollment2 = OfferEnrollmentFactory(offer_year=offers['PHYS11BA'], student=student2)
-        offer_enrollment3 = OfferEnrollmentFactory(offer_year=offers['PHYS11BA'], student=student3)
+        offer_enrollment1 = OfferEnrollmentFactory(education_group_year=egys['PHYS11BA'], student=student1)
+        offer_enrollment2 = OfferEnrollmentFactory(education_group_year=egys['PHYS11BA'], student=student2)
+        offer_enrollment3 = OfferEnrollmentFactory(education_group_year=egys['PHYS11BA'], student=student3)
 
-        offer_enrollment10 = OfferEnrollmentFactory(offer_year=offers['PHYS11BA'], student=student10)
-        offer_enrollment11 = OfferEnrollmentFactory(offer_year=offers['PHYS11BA'], student=student11)
-        offer_enrollment12 = OfferEnrollmentFactory(offer_year=offers['PHYS11BA'], student=student12)
-        offer_enrollment13 = OfferEnrollmentFactory(offer_year=offers['PHYS11BA'], student=student13)
-        offer_enrollment14 = OfferEnrollmentFactory(offer_year=offers['PHYS11BA'], student=student14)
-        offer_enrollment15 = OfferEnrollmentFactory(offer_year=offers['PHYS11BA'], student=student15)
-        offer_enrollment16 = OfferEnrollmentFactory(offer_year=offers['PHYS11BA'], student=student16)
+        offer_enrollment10 = OfferEnrollmentFactory(education_group_year=egys['PHYS11BA'], student=student10)
+        offer_enrollment11 = OfferEnrollmentFactory(education_group_year=egys['PHYS11BA'], student=student11)
+        offer_enrollment12 = OfferEnrollmentFactory(education_group_year=egys['PHYS11BA'], student=student12)
+        offer_enrollment13 = OfferEnrollmentFactory(education_group_year=egys['PHYS11BA'], student=student13)
+        offer_enrollment14 = OfferEnrollmentFactory(education_group_year=egys['PHYS11BA'], student=student14)
+        offer_enrollment15 = OfferEnrollmentFactory(education_group_year=egys['PHYS11BA'], student=student15)
+        offer_enrollment16 = OfferEnrollmentFactory(education_group_year=egys['PHYS11BA'], student=student16)
 
-        offer_enrollment4 = OfferEnrollmentFactory(offer_year=offers['ECON2M1'], student=student1)
-        offer_enrollment5 = OfferEnrollmentFactory(offer_year=offers['ECON2M1'], student=student2)
+        offer_enrollment4 = OfferEnrollmentFactory(education_group_year=egys['ECON2M1'], student=student1)
+        offer_enrollment5 = OfferEnrollmentFactory(education_group_year=egys['ECON2M1'], student=student2)
 
         # unité d'enseignement = learning_unit_year
         learning_unit = LearningUnitFactory()
@@ -738,14 +738,14 @@ class FunctionalTest(SeleniumTestCase, BusinessMixin):
 
         session_exam_calendar = SessionExamCalendarFactory(academic_calendar=academic_calendar)
 
-        session_exam_phys11ba = SessionExamFactory(learning_unit_year=learning_unit_year_1, number_session=session_exam_calendar.number_session, offer_year=offers['PHYS11BA'])
-        session_exam_econ2m1 = SessionExamFactory(learning_unit_year=learning_unit_year_2, number_session=session_exam_calendar.number_session, offer_year=offers['ECON2M1'])
+        session_exam_phys11ba = SessionExamFactory(learning_unit_year=learning_unit_year_1, number_session=session_exam_calendar.number_session, education_group_year=egys['PHYS11BA'])
+        session_exam_econ2m1 = SessionExamFactory(learning_unit_year=learning_unit_year_2, number_session=session_exam_calendar.number_session, education_group_year=egys['ECON2M1'])
 
-        session_exam_3 = SessionExamFactory(learning_unit_year=learning_unit_year_3, number_session=session_exam_calendar.number_session, offer_year=offers['ECON2M1'])
-        session_exam_4 = SessionExamFactory(learning_unit_year=learning_unit_year_3, number_session=session_exam_calendar.number_session, offer_year=offers['PHYS11BA'])
+        session_exam_3 = SessionExamFactory(learning_unit_year=learning_unit_year_3, number_session=session_exam_calendar.number_session, education_group_year=egys['ECON2M1'])
+        session_exam_4 = SessionExamFactory(learning_unit_year=learning_unit_year_3, number_session=session_exam_calendar.number_session, education_group_year=egys['PHYS11BA'])
 
-        offer_year_calendar = OfferYearCalendarFactory(academic_calendar=academic_calendar, offer_year=offers['PHYS11BA'])
-        offer_year_calendar = OfferYearCalendarFactory(academic_calendar=academic_calendar, offer_year=offers['ECON2M1'])
+        offer_year_calendar = OfferYearCalendarFactory(academic_calendar=academic_calendar, education_group_year=egys['PHYS11BA'])
+        offer_year_calendar = OfferYearCalendarFactory(academic_calendar=academic_calendar, education_group_year=egys['ECON2M1'])
 
         ExamEnrollmentFactory(learning_unit_enrollment=learning_unit_enrollment1, session_exam=session_exam_phys11ba)
         ExamEnrollmentFactory(learning_unit_enrollment=learning_unit_enrollment2, session_exam=session_exam_phys11ba)
@@ -778,7 +778,7 @@ class FunctionalTest(SeleniumTestCase, BusinessMixin):
 
         all_options = set(option.text for option in select.options)
 
-        all_offers = set(offers.keys())
+        all_offers = set(egys.keys())
 
         self.assertSetEqual({'Tout'}, all_options - all_offers)
 
