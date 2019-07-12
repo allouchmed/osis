@@ -299,6 +299,7 @@ def set_post_request(mock_decorators, data_dict, url):
 class TestAddSaveProgramManager(TestCase):
     @classmethod
     def setUpTestData(cls):
+        ProgramManagerGroupFactory()
         cls.person = PersonFactory()
         cls.offer_year_without_equivalent_education_group_year = OfferYearFactory(
             corresponding_education_group_year=None

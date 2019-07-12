@@ -86,13 +86,13 @@ def generate_exam_enrollments(year, with_different_offer=False):
                          for _ in range(0, number_enrollments)]
     else:
         session_exams = [SessionExamFactory(number_session=number_session.ONE, learning_unit_year=learning_unit_year,
-                                            offer_year__academic_year=academic_year)] * number_enrollments
-    offer_years = [session_exam.offer_year for session_exam in session_exams]
+                                            education_group_year__academic_year=academic_year)] * number_enrollments
+    egys = [session_exam.education_group_year for session_exam in session_exams]
 
     exam_enrollments = list()
     for i in range(0, number_enrollments):
         student = StudentFactory()
-        offer_enrollment = OfferEnrollmentFactory(offer_year=offer_years[i], student=student)
+        offer_enrollment = OfferEnrollmentFactory(education_group_year=egys[i], student=student)
         learning_unit_enrollment = LearningUnitEnrollmentFactory(learning_unit_year=learning_unit_year,
                                                                  offer_enrollment=offer_enrollment)
         exam_enrollments.append(ExamEnrollmentFactory(session_exam=session_exams[i],
@@ -110,12 +110,12 @@ class MixinTestUploadScoresFile(AcademicYearMockMixin):
         self.exam_enrollments = data["exam_enrollments"]
         self.attribution = data["attribution"]
         self.learning_unit_year = data["learning_unit_year"]
-        self.offer_year = data["offer_years"][0]
+        self.egy = data["egys"][0]
         self.students = [enrollment.learning_unit_enrollment.offer_enrollment.student for enrollment
                          in self.exam_enrollments]
 
-        self.offer_year.acronym = OFFER_ACRONYM
-        self.offer_year.save()
+        self.egy.acronym = OFFER_ACRONYM
+        self.egy.save()
 
         registration_ids = [REGISTRATION_ID_1, REGISTRATION_ID_2]
         mails = [EMAIL_1, EMAIL_2]

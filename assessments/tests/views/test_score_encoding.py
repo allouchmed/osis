@@ -47,6 +47,7 @@ from base.models.enums import number_session, academic_calendar_type
 from base.models.exam_enrollment import ExamEnrollment
 from base.tests.factories.academic_calendar import AcademicCalendarFactory
 from base.tests.factories.academic_year import AcademicYearFactory
+from base.tests.factories.group import ProgramManagerGroupFactory, TutorGroupFactory
 from base.tests.factories.learning_unit_year import LearningUnitYearFactory
 from base.tests.factories.offer_year import OfferYearFactory
 from base.tests.factories.offer_year_calendar import OfferYearCalendarFactory
@@ -62,8 +63,8 @@ from base.tests.models import test_exam_enrollment, test_offer_enrollment, test_
 
 class MixinSetupOnlineEncoding(AcademicYearMockMixin, SessionExamCalendarMockMixin):
     def setUp(self):
-        Group.objects.get_or_create(name="tutors")
-        Group.objects.get_or_create(name="program_managers")
+        TutorGroupFactory()
+        ProgramManagerGroupFactory()
         self.request_factory = RequestFactory()
         data = generate_exam_enrollments(2017, with_different_offer=True)
         self.academic_year = data["academic_year"]
@@ -71,10 +72,10 @@ class MixinSetupOnlineEncoding(AcademicYearMockMixin, SessionExamCalendarMockMix
         self.learning_unit_year = data["learning_unit_year"]
         self.enrollments = data["exam_enrollments"]
         self.attribution = data["attribution"]
-        self.offer_years = data["offer_years"]
+        self.egys = data["egys"]
         self.tutor = self.attribution.tutor
         add_permission(self.tutor.person.user, "can_access_scoreencoding")
-        self.program_managers = [ProgramManagerFactory(offer_year=self.offer_years[i]) for i in range(0,2)]
+        self.program_managers = [ProgramManagerFactory(education_group=self.egys[i].education_group) for i in range(0, 2)]
         [add_permission(self.program_managers[i].person.user, "can_access_scoreencoding") for i in range(0,2)]
 
         # Mock academic_year / session_exam_calendar in order to be decouple test from system time
@@ -142,7 +143,7 @@ class MixinSetupOnlineEncoding(AcademicYearMockMixin, SessionExamCalendarMockMix
 
     def get_form_for_specific_criteria(self):
         exam_enrollment = self.enrollments[0]
-        offer_year = exam_enrollment.learning_unit_enrollment.offer_enrollment.offer_year
+        offer_year = exam_enrollment.learning_unit_enrollment.offer_enrollment.education_group_year
         return {"score_" + str(exam_enrollment.id): "15",
                 "justification_" + str(exam_enrollment.id): "",
                 "score_changed_" + str(exam_enrollment.id): "true",
@@ -176,8 +177,8 @@ class OnlineEncodingTest(MixinSetupOnlineEncoding, TestCase):
         enrollments = self.enrollments
 
         expected = [self.enrollments[0]]
-        offer_year = self.enrollments[0].learning_unit_enrollment.offer_enrollment.offer_year
-        actual = score_encoding.filter_enrollments_by_education_group_year(enrollments, offer_year)
+        egy = self.enrollments[0].learning_unit_enrollment.offer_enrollment.education_group_year
+        actual = score_encoding.filter_enrollments_by_education_group_year(enrollments, egy)
 
         self.assertListEqual(expected, actual, "Should only return enrollments for the first offer year")
 
