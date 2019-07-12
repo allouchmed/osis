@@ -995,10 +995,10 @@ class Scenario7FunctionalTest(SeleniumTestCase, BusinessMixin):
 
         acronyms = ['PHYS11BA', 'ECON2M1', 'PHYS1BA', 'PHYS2M1', 'PHYS2MA']
 
-        offers = self.create_offers(academic_year, acronyms, person=person)
-        offer_year = offers['PHYS11BA']
+        egys = self.create_egys(academic_year, acronyms, person=person)
+        egy = egys['PHYS11BA']
 
-        OfferYearCalendarFactory(academic_calendar=academic_calendar, offer_year=offer_year)
+        OfferYearCalendarFactory(academic_calendar=academic_calendar, education_group_year=egy)
 
         # unité d'enseignement = learning_unit_year
         learning_unit_year = LearningUnitYearFactory(academic_year=academic_year)
@@ -1010,8 +1010,8 @@ class Scenario7FunctionalTest(SeleniumTestCase, BusinessMixin):
         )
 
         session_exam_calendar = SessionExamCalendarFactory(academic_calendar=academic_calendar)
-        session_exam = self.create_session_exam(learning_unit_year, session_exam_calendar, offer_year)
-        exam_enrollments = self.create_exam_enrollments(offer_year, learning_unit_year, session_exam)
+        session_exam = self.create_session_exam(learning_unit_year, session_exam_calendar, egy)
+        exam_enrollments = self.create_exam_enrollments(egy, learning_unit_year, session_exam)
 
         self.login(user.username)
 
@@ -1036,13 +1036,16 @@ class Scenario7FunctionalTest(SeleniumTestCase, BusinessMixin):
         time.sleep(1)
 
         score_encoding.via_paper.click()
-        # self.click_on('lnk_via_paper')
         time.sleep(1)
 
         self.click_on('lnk_notes_printing_{}'.format(learning_unit_year.id))
         time.sleep(1)
 
-        filename = 'Feuille de notes.pdf'
+        filename = 'session_{year}_{session_number}_{luy_acronym}.pdf'.format(
+            year=academic_year.year,
+            session_number=session_exam.number_session,
+            luy_acronym=learning_unit_year.acronym
+        )
         self.assertBrowserFileExists(filename, 'application/pdf')
 
     def assertBrowserFileExists(self, filename, mimetype=None):
@@ -1052,10 +1055,10 @@ class Scenario7FunctionalTest(SeleniumTestCase, BusinessMixin):
         if mimetype:
             self.assertEqual(mimetype, magic.from_file(path, mime=True))
 
-    def create_student(self, offer_year, learning_unit_year, session_exam):
+    def create_student(self, egy, learning_unit_year, session_exam):
         student = StudentFactory()
 
-        offer_enrollment = OfferEnrollmentFactory(offer_year=offer_year, student=student)
+        offer_enrollment = OfferEnrollmentFactory(education_group_year=egy, student=student)
         learning_unit_enrollment = LearningUnitEnrollmentFactory(offer_enrollment=offer_enrollment,
                                                                  learning_unit_year=learning_unit_year)
         enrollment = ExamEnrollmentFactory(learning_unit_enrollment=learning_unit_enrollment, session_exam=session_exam)
@@ -1086,32 +1089,32 @@ class Scenario7FunctionalTest(SeleniumTestCase, BusinessMixin):
         return academic_year, academic_calendar
 
     @classmethod
-    def create_session_exam(self, learning_unit_year, session_exam_calendar, offer_year):
+    def create_session_exam(self, learning_unit_year, session_exam_calendar, egy):
         return SessionExamFactory(
             learning_unit_year=learning_unit_year,
             number_session=session_exam_calendar.number_session,
-            offer_year=offer_year
+            education_group_year=egy
         )
 
-    def create_exam_enrollments(self, offer_year, learning_unit_year, session_exam, number_of_students=10):
+    def create_exam_enrollments(self, egy, learning_unit_year, session_exam, number_of_students=10):
         return [
-            self.create_student(offer_year, learning_unit_year, session_exam)[1]
+            self.create_student(egy, learning_unit_year, session_exam)[1]
             for counter in range(number_of_students)
         ]
 
     @classmethod
-    def create_offers(cls, academic_year, acronyms, person=None):
+    def create_egys(cls, academic_year, acronyms, person=None):
         assert isinstance(acronyms, (list, tuple)) and len(acronyms) > 0
-        offers = {
-            acronym: OfferYearFactory(academic_year=academic_year, acronym=acronym)
+        egys = {
+            acronym: EducationGroupYearFactory(academic_year=academic_year, acronym=acronym)
             for acronym in acronyms
         }
 
         if person:
-            for offer in offers.values():
-                ProgramManagerFactory(offer_year=offer, person=person)
+            for egy in egys.values():
+                ProgramManagerFactory(education_group=egy.education_group, person=person)
 
-        return offers
+        return egys
 
 
 import pypom
