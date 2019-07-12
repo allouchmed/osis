@@ -42,7 +42,7 @@ def get_scores_encoding_progress(user, offer_year_id, number_session, academic_y
 # FIXME Replace offer_year by education group year
 def find_related_education_group_years(score_encoding_progress_list):
     all_offers_ids = [score_encoding_progress.offer_year_id for score_encoding_progress in score_encoding_progress_list]
-    return EducationGroupYear.objects.filter(pk__in=all_offers_ids)
+    return EducationGroupYear.objects.filter(pk__in=all_offers_ids).order_by("acronym")
 
 
 # FIXME Replace offer_year by education group year

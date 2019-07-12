@@ -41,7 +41,11 @@ class OfferYearEntityFactory(factory.DjangoModelFactory):
 
     external_id = factory.fuzzy.FuzzyText(length=10, chars=string.digits)
     changed = factory.fuzzy.FuzzyNaiveDateTime(datetime.datetime(2016, 1, 1), datetime.datetime(2017, 3, 1))
-    offer_year = factory.SubFactory(OfferYearFactory)
+    offer_year = factory.SubFactory(
+        OfferYearFactory,
+        academic_year=factory.SelfAttribute('..education_group_year.academic_year'),
+        acronym=factory.SelfAttribute('..education_group_year.acronym')
+    )
     entity = factory.SubFactory(EntityFactory)
     type = factory.Iterator(offer_year_entity_type.TYPES, getter=operator.itemgetter(0))
     education_group_year = factory.SubFactory(EducationGroupYearFactory)

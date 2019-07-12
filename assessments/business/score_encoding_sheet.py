@@ -38,14 +38,14 @@ from base.models.enums import exam_enrollment_state as enrollment_states
 from base.models.offer_year import OfferYear
 
 
-def get_score_sheet_address(off_year):
-    address = score_sheet_address.get_from_education_group_year(off_year)
+def get_score_sheet_address(egy):
+    address = score_sheet_address.get_from_education_group_year(egy)
     entity_id = None
     if address is None:
-        address = off_year.id
+        address = egy.id
     else:
         if address and not address.customized:
-            map_offer_year_entity_type_with_entity_id = _get_map_offer_year_entity_type_with_entity(off_year)
+            map_offer_year_entity_type_with_entity_id = _get_map_offer_year_entity_type_with_entity(egy)
             entity_id = map_offer_year_entity_type_with_entity_id[address.entity_address_choice]
             ent_version = entity_version.get_last_version(entity_id)
             entity = entity_model.get_by_internal_id(entity_id)
@@ -67,10 +67,10 @@ def _get_address_as_dict(address):
         return {f_name: None for f_name in field_names}
 
 
-def _get_map_offer_year_entity_type_with_entity(off_year):
-    off_year_entity_manag = offer_year_entity.get_from_offer_year_and_type(off_year, ENTITY_MANAGEMENT)
+def _get_map_offer_year_entity_type_with_entity(egy):
+    off_year_entity_manag = offer_year_entity.get_from_education_group_year_and_type(egy, ENTITY_MANAGEMENT)
     entity_version_management = entity_version.get_last_version(off_year_entity_manag.entity)
-    off_year_entity_admin = offer_year_entity.get_from_offer_year_and_type(off_year, ENTITY_ADMINISTRATION)
+    off_year_entity_admin = offer_year_entity.get_from_education_group_year_and_type(egy, ENTITY_ADMINISTRATION)
     entity_version_admin = entity_version.get_last_version(off_year_entity_admin.entity)
     return {
         ENTITY_MANAGEMENT: entity_version_management.entity_id,

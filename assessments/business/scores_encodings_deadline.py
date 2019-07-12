@@ -126,7 +126,6 @@ def _get_oyc_by_reference(off_year_calendar, reference):
     if number_session:
         try:
             return offer_year_calendar.search(education_group_year_id=off_year_calendar.education_group_year.id,
-                                              offer_year=off_year_calendar.offer_year,
                                               academic_calendar_reference=reference,
                                               number_session=number_session).get()
         except offer_year_calendar.OfferYearCalendar.DoesNotExist:
