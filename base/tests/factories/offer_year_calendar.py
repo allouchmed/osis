@@ -56,10 +56,13 @@ class OfferYearCalendarFactory(factory.django.DjangoModelFactory):
         model = "base.OfferYearCalendar"
 
     external_id = factory.fuzzy.FuzzyText(length=10, chars=string.digits)
-    changed = factory.fuzzy.FuzzyNaiveDateTime(datetime.datetime(2016, 1, 1),
-                                          datetime.datetime(2017, 3, 1))
+    changed = factory.fuzzy.FuzzyNaiveDateTime(datetime.datetime(2016, 1, 1), datetime.datetime(2017, 3, 1))
     academic_calendar = factory.SubFactory(AcademicCalendarFactory)
-    offer_year = factory.SubFactory(OfferYearFactory)
+    offer_year = factory.SubFactory(
+        OfferYearFactory,
+        academic_year=factory.SelfAttribute('..education_group_year.academic_year'),
+        acronym=factory.SelfAttribute('..education_group_year.acronym')
+    )
     start_date = factory.LazyAttribute(generate_start_date)
     end_date = factory.LazyAttribute(generate_end_date)
     education_group_year = factory.SubFactory(EducationGroupYearFactory)

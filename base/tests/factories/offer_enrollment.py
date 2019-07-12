@@ -37,11 +37,13 @@ class OfferEnrollmentFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = "base.OfferEnrollment"
 
-    changed = factory.fuzzy.FuzzyNaiveDateTime(datetime.datetime(2016, 1, 1),
-                                          datetime.datetime(2017, 3, 1))
-    date_enrollment = factory.fuzzy.FuzzyNaiveDateTime(datetime.datetime(2016, 1, 1),
-                                                  datetime.datetime(2017, 3, 1))
+    changed = factory.fuzzy.FuzzyNaiveDateTime(datetime.datetime(2016, 1, 1), datetime.datetime(2017, 3, 1))
+    date_enrollment = factory.fuzzy.FuzzyNaiveDateTime(datetime.datetime(2016, 1, 1), datetime.datetime(2017, 3, 1))
     external_id = factory.fuzzy.FuzzyText(length=10, chars=string.digits)
-    offer_year = factory.SubFactory(OfferYearFactory)
+    offer_year = factory.SubFactory(
+        OfferYearFactory,
+        academic_year=factory.SelfAttribute('..education_group_year.academic_year'),
+        acronym=factory.SelfAttribute('..education_group_year.acronym')
+    )
     student = factory.SubFactory(StudentFactory)
     education_group_year = factory.SubFactory(EducationGroupYearFactory)
