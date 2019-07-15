@@ -165,7 +165,6 @@ def __save_xls_scores(request, file_name, learning_unit_year_id):
 
     score_list = _get_score_list_filtered_by_enrolled_state(learning_unit_year_id, request.user)
 
-    # FIXME Replace offer_year acronym  by education group year acronym
     offer_acronyms_managed_by_user = {egy.acronym for egy
                                       in score_encoding_list.find_related_education_group_years(score_list)}
     learn_unit_acronyms_managed_by_user = {learning_unit_year.acronym for learning_unit_year
@@ -263,7 +262,7 @@ def _is_empty_row(row):
 
 def _check_intergity_data(row, **kwargs):
     xls_registration_id = _extract_registration_id(row)
-    xls_offer_year_acronym = row[col_offer].value
+    xls_education_group_year_acronym = row[col_offer].value
     xls_learning_unit_acronym = row[col_learning_unit].value
     registration_ids_managed = kwargs.get('registration_ids_managed')
     learn_unit_acronyms_managed = kwargs.get('learn_unit_acronyms_managed')
@@ -284,10 +283,10 @@ def _check_intergity_data(row, **kwargs):
             raise UploadValueError(
                 "%s" % _("You encoded scores for more than 1 learning unit in your excel file (column 'Learning unit')."
                          "Please make one excel file by learning unit."), messages.ERROR)
-        elif xls_offer_year_acronym not in offer_acronyms_managed:
+        elif xls_education_group_year_acronym not in offer_acronyms_managed:
             # ... if it is because the user haven't access rights to the offerYear
             raise UploadValueError(
-                "'%s' %s" % (xls_offer_year_acronym,
+                "'%s' %s" % (xls_education_group_year_acronym,
                              _("You don't have access rights for this offer or it doesn't exist in our database")),
                 messages.ERROR)
         else:

@@ -74,11 +74,11 @@ def find_by_person(a_person):
     return ProgramManager.objects.select_related("offer_year").filter(person=a_person)
 
 
-def is_program_manager(user, offer_year=None, learning_unit_year=None, education_group=None):
+def is_program_manager(user, education_group_year=None, learning_unit_year=None, education_group=None):
     """
     Args:
         user: an instance of auth.User
-        offer_year: an annual offer to check whether the user is its program manager.
+        education_group_year: an annual offer to check whether the user is its program manager.
         learning_unit_year: an annual learning unit to check whether it is in the managed offers of the user.
         education_group: equals to offer_year (will replace it)
 
@@ -87,8 +87,8 @@ def is_program_manager(user, offer_year=None, learning_unit_year=None, education
     if user.has_perm('base.is_administrator'):
         return True
 
-    if offer_year:
-        return ProgramManager.objects.filter(person__user=user, education_group__educationgroupyear=offer_year).exists()
+    if education_group_year:
+        return ProgramManager.objects.filter(person__user=user, education_group__educationgroupyear=education_group_year).exists()
     elif learning_unit_year:
         # FIXME Use education group instead
         offers_user = ProgramManager.objects.filter(person__user=user).values('education_group')
