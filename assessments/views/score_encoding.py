@@ -108,9 +108,9 @@ def scores_encoding(request):
                'number_session': number_session,
                'active_tab': request.GET.get('active_tab')}
 
-    offer_year_id = request.GET.get('offer', None)
-    if offer_year_id:
-        offer_year_id = int(offer_year_id)
+    egy_id = request.GET.get('offer', None)
+    if egy_id:
+        egy_id = int(egy_id)
 
     if mdl.program_manager.is_program_manager(request.user):
         template_name = "scores_encoding_by_learning_unit.html"
@@ -140,7 +140,7 @@ def scores_encoding(request):
 
         score_encoding_progress_list = score_encoding_progress.get_scores_encoding_progress(
             user=request.user,
-            egy_id=offer_year_id,
+            egy_id=egy_id,
             number_session=number_session,
             academic_year=academic_yr,
             learning_unit_year_ids=learning_unit_year_ids
@@ -165,7 +165,7 @@ def scores_encoding(request):
 
         context.update({'offer_list': all_offers,
                         'tutor_list': all_tutors,
-                        'offer_year_id': offer_year_id,
+                        'offer_year_id': egy_id,
                         'tutor_id': tutor_id,
                         'learning_unit_year_acronym': learning_unit_year_acronym,
                         'incomplete_encodings_only': incomplete_encodings_only,
@@ -184,15 +184,15 @@ def scores_encoding(request):
 
         context.update({'tutor': tutor,
                         'offer_year_list': all_offers,
-                        'offer_year_id': offer_year_id})
+                        'offer_year_id': egy_id})
     if score_encoding_progress_list:
         filtered_list = [score_encoding for score_encoding in score_encoding_progress_list
-                         if score_encoding.offer_year_id == offer_year_id]
+                         if score_encoding.egy_id == egy_id]
     else:
         filtered_list = []
     context.update({
         'notes_list': score_encoding_progress.group_by_learning_unit_year(score_encoding_progress_list)
-        if not offer_year_id else filtered_list
+        if not egy_id else filtered_list
     })
 
     return render(request, template_name, context)

@@ -102,12 +102,6 @@ def is_program_manager(user, education_group_year=None, learning_unit_year=None,
         return ProgramManager.objects.filter(person__user=user).exists()
 
 
-# FIXME Use education group instead
-def find_by_offer_year(offer_yr):
-    return ProgramManager.objects.filter(offer_year=offer_yr) \
-        .order_by('person__last_name', 'person__first_name')
-
-
 def find_by_user(user, academic_year=None):
     queryset = ProgramManager.objects
     if academic_year:

@@ -35,41 +35,10 @@ from base.tests.factories.structure import StructureFactory
 from base.tests.factories.user import UserFactory
 
 
-class FindByOfferYearTest(TestCase):
+class IsProgramManagerTest(TestCase):
     def setUp(self):
         self.academic_year = AcademicYearFactory(current=True)
         self.offer_year = OfferYearFactory(academic_year=self.academic_year)
-
-    def test_case_offer_is_none(self):
-        self.assertQuerysetEqual(program_manager.find_by_offer_year(None), [])
-
-    def test_case_no_existing_program_manager_for_one_offer(self):
-        self.assertQuerysetEqual(program_manager.find_by_offer_year(self.offer_year), [])
-
-    def test_case_with_existing_program_manager(self):
-        pgm_mgr = ProgramManagerFactory(offer_year=self.offer_year)
-        self.assertQuerysetEqual(
-            program_manager.find_by_offer_year(self.offer_year),
-            [pgm_mgr],
-            transform=lambda rec: rec
-        )
-        self.assertEqual(len(program_manager.find_by_offer_year(self.offer_year)), 1)
-
-    def test_return_sorted_managers(self):
-        ProgramManagerFactory(offer_year=self.offer_year, person__first_name="Yannick", person__last_name="Leblanc")
-        ProgramManagerFactory(offer_year=self.offer_year, person__first_name="Yannick", person__last_name="Ferreira")
-        ProgramManagerFactory(offer_year=self.offer_year, person__first_name="Laura", person__last_name="Ferreira")
-        ProgramManagerFactory(offer_year=self.offer_year, person__first_name="Bob", person__last_name="Uncle")
-        ProgramManagerFactory(offer_year=self.offer_year, person__first_name="Laura", person__last_name="Dupont")
-
-        managers = program_manager.find_by_offer_year(self.offer_year)
-        self.assertEqual(managers[0].person.last_name, "Dupont")
-        self.assertEqual(managers[1].person.last_name, "Ferreira")
-        self.assertEqual(managers[1].person.first_name, "Laura")
-        self.assertEqual(managers[2].person.last_name, "Ferreira")
-        self.assertEqual(managers[2].person.first_name, "Yannick")
-        self.assertEqual(managers[3].person.last_name, "Leblanc")
-        self.assertEqual(managers[4].person.last_name, "Uncle")
 
     def test_is_program_manager(self):
         user = UserFactory(username="PGRM_1")
