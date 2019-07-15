@@ -70,8 +70,7 @@ class ProgramManager(models.Model):
 
 
 def find_by_person(a_person):
-    # FIXME Use education group instead
-    return ProgramManager.objects.select_related("offer_year").filter(person=a_person)
+    return ProgramManager.objects.filter(person=a_person).select_related('education_group', 'person')
 
 
 def is_program_manager(user, education_group_year=None, learning_unit_year=None, education_group=None):
@@ -88,7 +87,10 @@ def is_program_manager(user, education_group_year=None, learning_unit_year=None,
         return True
 
     if education_group_year:
-        return ProgramManager.objects.filter(person__user=user, education_group__educationgroupyear=education_group_year).exists()
+        return ProgramManager.objects.filter(
+            person__user=user,
+            education_group__educationgroupyear=education_group_year
+        ).exists()
     elif learning_unit_year:
         # FIXME Use education group instead
         offers_user = ProgramManager.objects.filter(person__user=user).values('education_group')
