@@ -25,8 +25,7 @@
 ##############################################################################
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
-from base.models import offer, program_manager, academic_year
-from base.models.education_group_year import EducationGroupYear
+from base.models import offer
 from osis_common.models.serializable_model import SerializableModel, SerializableModelAdmin
 
 
@@ -160,20 +159,6 @@ def search(entity=None, academic_yr=None, acronym=None):
         out = queryset.order_by('acronym')
 
     return out
-
-
-def find_by_user(user, academic_yr=None):
-    """
-    :param user: User from which we get the offerYears.
-    :param academic_yr: The academic year (takes the current academic year by default).
-    :return: All OfferYears where the user is a program manager for a given year.
-    """
-    if not academic_yr:
-        academic_yr = academic_year.current_academic_year()
-    return EducationGroupYear.objects.filter(
-        academic_year=academic_yr,
-        education_group__programmanager__person__user=user
-    ).order_by('acronym')
 
 
 def get_last_offer_year_by_offer(an_offer):

@@ -23,39 +23,37 @@
 #    see http://www.gnu.org/licenses/.
 #
 ##############################################################################
+import base.models.education_group_year
 from base.models import offer_year, exam_enrollment, tutor
 from attribution.models import attribution
 from base.models.education_group_year import EducationGroupYear
 
 
-def get_scores_encoding_progress(user, offer_year_id, number_session, academic_year, learning_unit_year_ids=None):
-    queryset = exam_enrollment.get_progress_by_learning_unit_years_and_offer_years(user=user,
-                                                                                   offer_year_id=offer_year_id,
-                                                                                   session_exam_number=number_session,
-                                                                                   academic_year=academic_year,
-                                                                                   learning_unit_year_ids=learning_unit_year_ids,
-                                                                                   only_enrolled=True)
-
+def get_scores_encoding_progress(user, egy_id, number_session, academic_year, learning_unit_year_ids=None):
+    queryset = exam_enrollment.get_progress_by_learning_unit_years_and_education_group_year(
+        user=user,
+        egy_id=egy_id,
+        session_exam_number=number_session,
+        academic_year=academic_year,
+        learning_unit_year_ids=learning_unit_year_ids,
+        only_enrolled=True
+    )
     return _sort_by_acronym([ScoreEncodingProgress(**row) for row in list(queryset)])
 
 
-# FIXME Replace offer_year by education group year
 def find_related_education_group_years(score_encoding_progress_list):
-    all_offers_ids = [score_encoding_progress.offer_year_id for score_encoding_progress in score_encoding_progress_list]
-    return EducationGroupYear.objects.filter(pk__in=all_offers_ids).order_by("acronym")
+    all_egy_ids = [score_encoding_progress.egy_id for score_encoding_progress in score_encoding_progress_list]
+    return EducationGroupYear.objects.filter(pk__in=all_egy_ids).order_by("acronym")
 
 
-# FIXME Replace offer_year by education group year
 def find_related_tutors(user, academic_year, session_exam_number):
-    # Find all offer managed by current user
-    # FIXME Use egy instead
-    offer_year_ids = list(offer_year.find_by_user(user).values_list('id', flat=True))
+    egy_ids = list(base.models.education_group_year.find_by_user(user).values_list('id', flat=True))
 
     learning_unit_year_ids = list(
         exam_enrollment.find_for_score_encodings(
             session_exam_number=session_exam_number,
             academic_year=academic_year,
-            offers_year=offer_year_ids,
+            egys=egy_ids,
             with_session_exam_deadline=False
         ).distinct(
             'learning_unit_enrollment__learning_unit_year'
@@ -142,7 +140,6 @@ def _sort_by_acronym(score_encoding_progress_list):
     return sorted(score_encoding_progress_list, key=lambda k: k.learning_unit_year_acronym)
 
 
-# FIXME Replace offer_year by education group year
 class ScoreEncodingProgress:
     def __init__(self, **kwargs):
         self.learning_unit_year_id = kwargs.get('learning_unit_enrollment__learning_unit_year')
@@ -154,7 +151,7 @@ class ScoreEncodingProgress:
                    )
         )
 
-        self.offer_year_id = kwargs.get('learning_unit_enrollment__offer_enrollment__education_group_year')
+        self.egy_id = kwargs.get('learning_unit_enrollment__offer_enrollment__education_group_year')
         self.exam_enrollments_encoded = kwargs.get('exam_enrollments_encoded')
         self.scores_not_yet_submitted = kwargs.get('scores_not_yet_submitted')
         self.total_exam_enrollments = kwargs.get('total_exam_enrollments')

@@ -29,6 +29,7 @@ import unicodedata
 
 from django.db import transaction
 
+import base.models.education_group_year
 from base.models import academic_year, session_exam_calendar, exam_enrollment, program_manager, tutor, offer_year, \
                         learning_unit_year
 from base.models.enums import exam_enrollment_justification_type
@@ -49,14 +50,14 @@ def get_scores_encoding_list(user, **kwargs):
         professor = tutor.find_by_id(tutor_id) if tutor_id else None
         # FIXME Replace offer_year by education group year
         egys = [offer_year.find_by_id(egy_id)] if egy_id else \
-            list(offer_year.find_by_user(user, academic_yr=current_academic_year))
+            list(base.models.education_group_year.find_by_user(user, academic_yr=current_academic_year))
 
         enrollments = exam_enrollment.find_for_score_encodings(
             academic_year=current_academic_year,
             session_exam_number=current_number_session,
             learning_unit_year_id=learning_unit_year_id,
             tutor=professor,
-            offers_year=egys,
+            egys=egys,
             registration_id=kwargs.get('registration_id'),
             student_last_name=kwargs.get('student_last_name'),
             student_first_name=kwargs.get('student_first_name'),

@@ -37,7 +37,7 @@ from django.utils.translation import gettext_lazy as _, ngettext
 from reversion.admin import VersionAdmin
 
 from backoffice.settings.base import LANGUAGE_CODE_EN
-from base.models import entity_version
+from base.models import entity_version, academic_year
 from base.models.entity import Entity
 from base.models.enums import academic_type, internship_presence, schedule_type, activity_presence, \
     diploma_printing_orientation, active_status, duration_unit, decree_category, rate_code
@@ -970,3 +970,17 @@ def _find_with_learning_unit_enrollment_count(learning_unit_year):
     return EducationGroupYear.objects \
         .filter(offerenrollment__learningunitenrollment__learning_unit_year_id=learning_unit_year) \
         .annotate(count_learning_unit_enrollments=Count('offerenrollment__learningunitenrollment')).order_by('acronym')
+
+
+def find_by_user(user, academic_yr=None):
+    """
+    :param user: User from which we get the offerYears.
+    :param academic_yr: The academic year (takes the current academic year by default).
+    :return: All OfferYears where the user is a program manager for a given year.
+    """
+    if not academic_yr:
+        academic_yr = academic_year.current_academic_year()
+    return EducationGroupYear.objects.filter(
+        academic_year=academic_yr,
+        education_group__programmanager__person__user=user
+    ).order_by('acronym')

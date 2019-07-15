@@ -41,6 +41,7 @@ from django.urls import reverse, reverse_lazy
 from django.utils.translation import ugettext_lazy as _
 from psycopg2._psycopg import OperationalError as PsycopOperationalError, InterfaceError as  PsycopInterfaceError
 
+import base.models.education_group_year
 from assessments.business import score_encoding_progress, score_encoding_list, score_encoding_export
 from assessments.business import score_encoding_sheet
 from attribution import models as mdl_attr
@@ -139,7 +140,7 @@ def scores_encoding(request):
 
         score_encoding_progress_list = score_encoding_progress.get_scores_encoding_progress(
             user=request.user,
-            offer_year_id=offer_year_id,
+            egy_id=offer_year_id,
             number_session=number_session,
             academic_year=academic_yr,
             learning_unit_year_ids=learning_unit_year_ids
@@ -157,8 +158,7 @@ def scores_encoding(request):
 
         all_tutors = score_encoding_progress.find_related_tutors(request.user, academic_yr, number_session)
 
-        # FIXME Replace offer_year by education group year
-        all_offers = mdl.offer_year.find_by_user(request.user, academic_yr=academic_yr)
+        all_offers = base.models.education_group_year.find_by_user(request.user, academic_yr=academic_yr)
 
         if not score_encoding_progress_list:
             messages.add_message(request, messages.WARNING, _('No result!'))
@@ -175,7 +175,7 @@ def scores_encoding(request):
         tutor = mdl.tutor.find_by_user(request.user)
         score_encoding_progress_list = score_encoding_progress.get_scores_encoding_progress(
             user=request.user,
-            offer_year_id=None,
+            egy_id=None,
             number_session=number_session,
             academic_year=academic_yr
         )
@@ -566,8 +566,7 @@ def _get_specific_criteria_context(request):
     justification = post_data.get('justification')
     offer_year_id = post_data.get('program')
     current_academic_year = mdl.academic_year.current_academic_year()
-    # FIXME Replace offer_year by education group year
-    offers_year_managed = mdl.offer_year.find_by_user(request.user, current_academic_year)
+    egy_managed = base.models.education_group_year.find_by_user(request.user, current_academic_year)
     is_program_manager = mdl.program_manager.is_program_manager(request.user)
 
     context = {
@@ -576,7 +575,7 @@ def _get_specific_criteria_context(request):
         'last_name': last_name,
         'first_name': first_name,
         'justification': justification,
-        'offer_list': offers_year_managed,
+        'offer_list': egy_managed,
         'is_program_manager': is_program_manager
     }
 

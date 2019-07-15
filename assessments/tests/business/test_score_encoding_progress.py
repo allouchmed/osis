@@ -78,7 +78,7 @@ class ScoreEncodingProgressTest(TestCase):
     def test_get_scores_encoding_progress_program_manager(self):
         progress_list = score_encoding_progress.get_scores_encoding_progress(
             user=self.program_manager.person.user,
-            offer_year_id=None,
+            egy_id=None,
             number_session=number_session.ONE,
             academic_year=self.academic_year
         )
@@ -97,7 +97,7 @@ class ScoreEncodingProgressTest(TestCase):
     def test_get_scores_encoding_progress_program_manager_with_filter_offer_year(self):
         progress_list = score_encoding_progress.get_scores_encoding_progress(
             user=self.program_manager.person.user,
-            offer_year_id=self.egy_2,
+            egy_id=self.egy_2,
             number_session=number_session.ONE,
             academic_year=self.academic_year
         )
@@ -112,7 +112,7 @@ class ScoreEncodingProgressTest(TestCase):
 
         progress_list = score_encoding_progress.get_scores_encoding_progress(
             user=self.program_manager.person.user,
-            offer_year_id=self.egy_2,
+            egy_id=self.egy_2,
             number_session=number_session.ONE,
             academic_year=self.academic_year
         )
@@ -124,7 +124,7 @@ class ScoreEncodingProgressTest(TestCase):
     def test_get_scores_encoding_progress_filter_only_incomplete(self):
         progress_list = score_encoding_progress.get_scores_encoding_progress(
             user=self.program_manager.person.user,
-            offer_year_id=None,
+            egy_id=None,
             number_session=number_session.ONE,
             academic_year=self.academic_year
         )
@@ -136,7 +136,7 @@ class ScoreEncodingProgressTest(TestCase):
     def test_get_scores_encoding_progress_filter_without_attribution(self):
         progress_list = score_encoding_progress.get_scores_encoding_progress(
             user=self.program_manager.person.user,
-            offer_year_id=None,
+            egy_id=None,
             number_session=number_session.ONE,
             academic_year=self.academic_year
         )
@@ -149,7 +149,7 @@ class ScoreEncodingProgressTest(TestCase):
     def test_find_related_offer_years(self):
         progress_list = score_encoding_progress.get_scores_encoding_progress(
             user=self.program_manager.person.user,
-            offer_year_id=None,
+            egy_id=None,
             number_session=number_session.ONE,
             academic_year=self.academic_year
         )
@@ -197,7 +197,7 @@ class ScoreEncodingProgressTest(TestCase):
     def test_get_scores_encoding_progress_tutor(self):
         progress_list = score_encoding_progress.get_scores_encoding_progress(
             user=self.tutor.person.user,
-            offer_year_id=None,
+            egy_id=None,
             number_session=number_session.ONE,
             academic_year=self.academic_year
         )

@@ -30,6 +30,7 @@ from django.db import models
 from django.db.models import When, Case, Q, Sum, Count, IntegerField, F
 from django.utils.translation import ugettext as _
 
+import base.models.education_group_year
 from attribution.models import attribution
 from base.models import person, session_exam_deadline, \
     academic_year as academic_yr, offer_year, program_manager, tutor
@@ -262,18 +263,17 @@ def create_exam_enrollment_historic(user, enrollment):
     exam_enrollment_history.save()
 
 
-def get_progress_by_learning_unit_years_and_offer_years(user,
-                                                        session_exam_number,
-                                                        learning_unit_year_id=None,
-                                                        learning_unit_year_ids=None,
-                                                        offer_year_id=None,
-                                                        academic_year=None,
-                                                        only_enrolled=False):
-    if offer_year_id:
-        offer_year_ids = [offer_year_id]
+def get_progress_by_learning_unit_years_and_education_group_year(user,
+                                                                 session_exam_number,
+                                                                 learning_unit_year_id=None,
+                                                                 learning_unit_year_ids=None,
+                                                                 egy_id=None,
+                                                                 academic_year=None,
+                                                                 only_enrolled=False):
+    if egy_id:
+        egy_ids = [egy_id]
     else:
-        # FIXME Use egy instead
-        offer_year_ids = offer_year.find_by_user(user).values_list('id', flat=True)
+        egy_ids = base.models.education_group_year.find_by_user(user).values_list('id', flat=True)
 
     tutor_user = None
     if not program_manager.is_program_manager(user):
@@ -282,7 +282,7 @@ def get_progress_by_learning_unit_years_and_offer_years(user,
     queryset = find_for_score_encodings(session_exam_number=session_exam_number,
                                         learning_unit_year_id=learning_unit_year_id,
                                         learning_unit_year_ids=learning_unit_year_ids,
-                                        offers_year=offer_year_ids,
+                                        egys=egy_ids,
                                         tutor=tutor_user,
                                         academic_year=academic_year,
                                         with_session_exam_deadline=False,
@@ -319,8 +319,8 @@ def find_for_score_encodings(session_exam_number,
                              learning_unit_year_id=None,
                              learning_unit_year_ids=None,
                              tutor=None,
-                             offer_year_id=None,
-                             offers_year=None,
+                             egy_id=None,
+                             egys=None,
                              with_justification_or_score_final=False,
                              with_justification_or_score_draft=False,
                              registration_id=None,
@@ -336,8 +336,8 @@ def find_for_score_encodings(session_exam_number,
     :param learning_unit_year_id: Filter OfferEnrollments by learning_unit_year.
     :param learning_unit_year_ids: Filter OfferEnrollments by a list of learning_unit_year.
     :param tutor: Filter OfferEnrollments by Tutor.
-    :param offer_year_id: Filter OfferEnrollments by Offer year ids
-    :param offers_year: Filter OfferEnrollments by OfferYear.
+    :param egy_id: Filter OfferEnrollments by EducationGroupYear id
+    :param egys: Filter OfferEnrollments by EducationGroupYear.
     :param with_justification_or_score_final: If True, only examEnrollments with a score_final or a justification_final
                                               are returned.
     :param with_justification_or_score_draft: If True, only examEnrollments with a score_draft or a justification_draft
@@ -366,12 +366,10 @@ def find_for_score_encodings(session_exam_number,
             learning_unit_years = attribution.find_by_tutor(tutor)
             queryset = queryset.filter(learning_unit_enrollment__learning_unit_year_id__in=learning_unit_years)
 
-    if offer_year_id:
-        # FIXME Use egy instead
-        queryset = queryset.filter(learning_unit_enrollment__offer_enrollment__education_group_year_id=offer_year_id)
-    elif offers_year:
-        # FIXME Use egy instead
-        queryset = queryset.filter(learning_unit_enrollment__offer_enrollment__education_group_year_id__in=offers_year)
+    if egy_id:
+        queryset = queryset.filter(learning_unit_enrollment__offer_enrollment__education_group_year_id=egy_id)
+    elif egys:
+        queryset = queryset.filter(learning_unit_enrollment__offer_enrollment__education_group_year_id__in=egys)
 
     if with_justification_or_score_final:
         queryset = queryset.exclude(score_final=None, justification_final=None)
@@ -405,7 +403,7 @@ def find_for_score_encodings(session_exam_number,
                             to_attr="session_exam_deadlines")
         )
 
-    return queryset.select_related('learning_unit_enrollment__offer_enrollment__offer_year') \
+    return queryset.select_related('learning_unit_enrollment__offer_enrollment__education_group_year') \
         .select_related('session_exam') \
         .select_related('learning_unit_enrollment__offer_enrollment__student__person') \
         .select_related('learning_unit_enrollment__learning_unit_year')
