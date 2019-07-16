@@ -64,10 +64,10 @@
                                 <label>{% trans 'Offer' %}</label><br>
                                 <select id="slt_offer_list_selection" name="offer" class="form-control">
                                     <option value="">{% trans 'All'%}</option>
-                                    {% for offer_year in offer_year_list %}
-                                    <option value="{{offer_year.id}}"
-                                            {%if offer == offer_year.id %}selected{%endif%}>
-                                        {{offer_year.acronym}}
+                                    {% for egy in education_group_list %}
+                                    <option value="{{egy.id}}"
+                                            {%if offer == egy.id %}selected{%endif%}>
+                                        {{egy.acronym}}
                                     </option>
                                     {%endfor%}
                                 </select>

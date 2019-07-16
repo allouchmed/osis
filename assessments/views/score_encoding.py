@@ -183,7 +183,7 @@ def scores_encoding(request):
         all_offers = score_encoding_progress.find_related_education_group_years(score_encoding_progress_list)
 
         context.update({'tutor': tutor,
-                        'offer_year_list': all_offers,
+                        'education_group_list': all_offers,
                         'offer_year_id': egy_id})
     if score_encoding_progress_list:
         filtered_list = [score_encoding for score_encoding in score_encoding_progress_list
