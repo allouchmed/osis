@@ -174,7 +174,6 @@ def scores_sheet_data(exam_enrollments, tutor=None):
             else:
                 deliberation_date = _('Not passed')
 
-            # FIXME Replace offer_year by education group year
             program = {
                 'acronym': exam_enrollment.learning_unit_enrollment.offer_enrollment.education_group_year.acronym,
                 'deliberation_date': deliberation_date,

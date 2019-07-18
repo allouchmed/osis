@@ -165,7 +165,7 @@ def scores_encoding(request):
 
         context.update({'offer_list': all_offers,
                         'tutor_list': all_tutors,
-                        'offer_year_id': egy_id,
+                        'education_group_year_id': egy_id,
                         'tutor_id': tutor_id,
                         'learning_unit_year_acronym': learning_unit_year_acronym,
                         'incomplete_encodings_only': incomplete_encodings_only,
@@ -179,12 +179,11 @@ def scores_encoding(request):
             number_session=number_session,
             academic_year=academic_yr
         )
-        # FIXME Replace offer_year by education group year
         all_offers = score_encoding_progress.find_related_education_group_years(score_encoding_progress_list)
 
         context.update({'tutor': tutor,
                         'education_group_list': all_offers,
-                        'offer_year_id': egy_id})
+                        'education_group_year_id': egy_id})
     if score_encoding_progress_list:
         filtered_list = [score_encoding for score_encoding in score_encoding_progress_list
                          if score_encoding.egy_id == egy_id]
@@ -419,7 +418,7 @@ def notes_printing(request, learning_unit_year_id=None, tutor_id=None, offer_id=
         user=request.user,
         learning_unit_year_id=learning_unit_year_id,
         tutor_id=tutor_id,
-        offer_year_id=offer_id
+        education_group_year_id=offer_id
     )
     tutor = mdl.tutor.find_by_user(request.user) if not is_program_manager else None
     sheet_data = score_encoding_sheet.scores_sheet_data(scores_list_encoded.enrollments, tutor=tutor)
@@ -564,13 +563,13 @@ def _get_specific_criteria_context(request):
     last_name = post_data.get('last_name')
     first_name = post_data.get('first_name')
     justification = post_data.get('justification')
-    offer_year_id = post_data.get('program')
+    education_group_year_id = post_data.get('program')
     current_academic_year = mdl.academic_year.current_academic_year()
     egy_managed = base.models.education_group_year.find_by_user(request.user, current_academic_year)
     is_program_manager = mdl.program_manager.is_program_manager(request.user)
 
     context = {
-        'offer_year_id': int(offer_year_id) if offer_year_id else None,
+        'education_group_year_id': int(education_group_year_id) if education_group_year_id else None,
         'registration_id': registration_id,
         'last_name': last_name,
         'first_name': first_name,
@@ -581,7 +580,7 @@ def _get_specific_criteria_context(request):
 
     if request.method == 'POST':
         # Make a search
-        if not registration_id and not last_name and not first_name and not justification and not offer_year_id:
+        if not registration_id and not last_name and not first_name and not justification and not education_group_year_id:
             messages.add_message(request, messages.WARNING, _("Please choose at least one criteria!"))
         else:
             _append_search_to_specific_criteria_context(request, context)
@@ -595,7 +594,7 @@ def _append_search_to_specific_criteria_context(request, context):
         student_last_name=context['last_name'],
         student_first_name=context['first_name'],
         justification=context['justification'],
-        offer_year_id=context['offer_year_id']
+        education_group_year_id=context['education_group_year_id']
     )
     context.update(scores_list.__dict__)
     if not scores_list.enrollments:

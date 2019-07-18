@@ -37,7 +37,6 @@ from assessments.forms.score_sheet_address import ScoreSheetAddressForm
 from assessments.models import score_sheet_address as score_sheet_address_model
 from base import models as mdl
 from base.models.education_group_year import EducationGroupYear
-from base.models.offer_year import OfferYear
 from base.models.utils.utils import get_object_or_none
 from reference.models.country import Country
 
@@ -48,11 +47,11 @@ from reference.models.country import Country
 @require_http_methods(["GET"])
 def offer_score_encoding_tab(request, education_group_year_id):
     context = _get_common_context(request, education_group_year_id)
-    score_sheet_address = score_encoding_sheet.get_score_sheet_address(context.get('offer_year'))
+    score_sheet_address = score_encoding_sheet.get_score_sheet_address(context.get('education_group_year'))
     entity_id_selected = score_sheet_address['entity_id_selected']
     address = score_sheet_address['address']
-    if not address.get('offer_year'):
-        address['offer_year'] = education_group_year_id
+    if not address.get('education_group_year'):
+        address['education_group_year'] = education_group_year_id
     form = ScoreSheetAddressForm(initial=address)
     context.update({'entity_id_selected': entity_id_selected, 'form': form})
     return render(request, "offer/score_sheet_address_tab.html", context)
@@ -61,7 +60,7 @@ def offer_score_encoding_tab(request, education_group_year_id):
 def _get_common_context(request, education_group_year_id):
     egy = get_object_or_none(EducationGroupYear, pk=education_group_year_id)
     return {
-        'offer_year': egy,
+        'education_group_year': egy,
         'countries': Country.objects.all(),
         'is_program_manager': mdl.program_manager.is_program_manager(request.user, education_group_year=egy),
         'entity_versions': score_encoding_sheet.get_entity_version_choices(egy),
@@ -98,7 +97,7 @@ def _save_from_entity_address(context, entity_version_id_selected, education_gro
     email_encode = request.POST.get('email')
     form = score_sheet_address_entity.ScoreSheetAddressEntityForm(request.POST)
     if form.is_valid():
-        score_encoding_sheet.save_address_from_entity(context.get('offer_year'), entity_version_id_selected,
+        score_encoding_sheet.save_address_from_entity(context.get('education_group_year'), entity_version_id_selected,
                                                       request.POST.get('email'))
         messages.add_message(request, messages.SUCCESS, _("Score sheet address was successfully saved."))
         return HttpResponseRedirect(reverse("offer_score_encoding_tab", args=[education_group_year_id]))
@@ -113,8 +112,8 @@ def incorrect_email_management(context_param, email_encode, education_group_year
     entity_id_selected = dict['entity_id_selected']
     address = dict['address']
     address['email'] = email_encode
-    if not address.get('offer_year'):
-        address['offer_year'] = education_group_year_id
+    if not address.get('education_group_year'):
+        address['education_group_year'] = education_group_year_id
     form = ScoreSheetAddressForm(initial=address)
     form.errors['email'] = _('Enter a valid email address.')
     context.update({'form': form})

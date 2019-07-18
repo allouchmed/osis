@@ -38,6 +38,7 @@ from django.views.generic import ListView, DeleteView, FormView
 from django.views.generic.edit import BaseUpdateView
 
 from base import models as mdl
+from base.models.education_group_year import EducationGroupYear
 from base.models.entity_manager import is_entity_manager, has_perm_entity_manager
 from base.models.offer_type import OfferType
 from base.models.offer_year import OfferYear
@@ -57,18 +58,17 @@ class ProgramManagerListView(ListView):
 
     def get_queryset(self):
         qs = super().get_queryset()
-        offer_years = self.request.GET.getlist('offer_year')
-        if not offer_years:
+        education_group_years = self.request.GET.getlist('education_group_year')
+        if not education_group_years:
             return qs.none()
 
-        # FIXME Replace offer_year by education group year
-        return qs.filter(offer_year__in=offer_years).order_by(
+        return qs.filter(education_group__educationgroupyear__in=education_group_years).order_by(
             'person__last_name', 'person__first_name', 'pk'
-        ).select_related('person', 'offer_year__academic_year')
+        ).select_related('person', 'education_group__educationgroupyear__academic_year')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['offer_years'] = self.request.GET.getlist('offer_year')
+        context['education_group_years'] = self.request.GET.getlist('education_group_year')
 
         result = OrderedDict()
         for i in self.object_list:
@@ -86,15 +86,14 @@ class ProgramManagerMixin(UserPassesTestMixin, AjaxTemplateMixin):
     def test_func(self):
         return is_entity_manager(self.request.user)
 
-    # FIXME Replace property offer_years by property education group years
     @property
-    def offer_years(self) -> list:
-        return self.request.GET['offer_year'].split(',')
+    def education_group_years(self) -> list:
+        return self.request.GET['education_group_year'].split(',')
 
     def get_success_url(self):
         url = reverse_lazy('manager_list') + "?"
-        for oy in self.offer_years:
-            url += "offer_year={}&".format(oy)
+        for oy in self.education_group_years:
+            url += "egy={}&".format(oy)
         return url
 
 
@@ -111,11 +110,10 @@ class ProgramManagerDeleteView(ProgramManagerMixin, DeleteView):
 class ProgramManagerPersonDeleteView(ProgramManagerMixin, DeleteView):
     template_name = 'admin/programmanager_confirm_delete_inner.html'
 
-    # FIXME Replace offer_year by education group year
     def get_object(self, queryset=None):
         return self.model.objects.filter(
             person__pk=self.kwargs['pk'],
-            offer_year__in=self.offer_years
+            education_group__educationgroupyear__in=self.education_group_years
         )
 
     def delete(self, request, *args, **kwargs):
@@ -124,12 +122,13 @@ class ProgramManagerPersonDeleteView(ProgramManagerMixin, DeleteView):
             obj.delete()
         return self._ajax_response() or HttpResponseRedirect(self.get_success_url())
 
-    # FIXME Replace offer_year by education group year
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         manager = Person.objects.get(pk=self.kwargs['pk'])
         context['manager'] = manager
-        context['other_programs'] = manager.programmanager_set.exclude(offer_year__in=self.offer_years)
+        context['other_programs'] = manager.programmanager_set.exclude(
+            education_group__educationgroupyear__in=self.education_group_years
+        )
         return context
 
 
@@ -141,7 +140,7 @@ class MainProgramManagerPersonUpdateView(ProgramManagerMixin, ListView):
     def get_queryset(self):
         return self.model.objects.filter(
             person=self.kwargs["pk"],
-            offer_year__in=self.offer_years
+            education_group__educationgroupyear__in=self.education_group_years
         )
 
     def post(self, *args, **kwargs):
@@ -175,16 +174,15 @@ class ProgramManagerCreateView(ProgramManagerMixin, FormView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['offer_years'] = self.request.GET['offer_year']
+        context['education_group_years'] = self.request.GET['education_group_year']
         return context
 
-    # FIXME Replace offer_year by education group year
     def form_valid(self, form):
-        offer_years = OfferYear.objects.filter(pk__in=self.offer_years)
+        education_group_years = EducationGroupYear.objects.filter(pk__in=self.education_group_years)
 
         person = form.cleaned_data['person']
-        for oy in offer_years:
-            ProgramManager.objects.get_or_create(person=person, offer_year=oy)
+        for egy in education_group_years:
+            ProgramManager.objects.get_or_create(person=person, education_group=egy.education_group)
 
         return super().form_valid(form)
 

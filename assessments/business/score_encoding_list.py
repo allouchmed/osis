@@ -40,7 +40,7 @@ def get_scores_encoding_list(user, **kwargs):
     current_number_session = session_exam_calendar.find_session_exam_number()
     is_program_manager = program_manager.is_program_manager(user)
     learning_unit_year_id = kwargs.get('learning_unit_year_id')
-    egy_id = kwargs.get('offer_year_id')
+    egy_id = kwargs.get('education_group_year_id')
     tutor_id = kwargs.get('tutor_id')
     enrollments_ids = kwargs.get('enrollments_ids')
     justification = kwargs.get('justification')

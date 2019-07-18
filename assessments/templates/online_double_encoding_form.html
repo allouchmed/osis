@@ -128,7 +128,7 @@
                 <tbody>
                 {% for enrollment in enrollments %}
                     <tr style="background-color:{% include 'blocks/row_color.html' %}">
-                        <td>{{ enrollment.learning_unit_enrollment.offer_enrollment.offer_year.acronym }}</td>
+                        <td>{{ enrollment.learning_unit_enrollment.offer_enrollment.education_group_year.acronym }}</td>
                         <td>{{ enrollment.learning_unit_enrollment.offer_enrollment.student.registration_id }}</td>
                         <td>{{ enrollment.learning_unit_enrollment.offer_enrollment.student.person.last_name|default_if_none:"" }}</td>
                         <td>{{ enrollment.learning_unit_enrollment.offer_enrollment.student.person.first_name|default_if_none:"" }}</td>
