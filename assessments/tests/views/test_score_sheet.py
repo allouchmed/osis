@@ -45,7 +45,7 @@ class OfferScoreSheetTabViewTest(TestCase):
                                                  end_date=today.replace(year=today.year + 1),
                                                  year=today.year)
         self.egy = EducationGroupYearFactory(academic_year=self.academic_year)
-        self.COMMON_CONTEXT_KEYS = ['offer_year', 'countries', 'is_program_manager', 'entity_versions']
+        self.COMMON_CONTEXT_KEYS = ['education_group_year', 'countries', 'is_program_manager', 'entity_versions']
 
     def test_get_common_context(self):
         request = mock.Mock(method='GET')
@@ -59,7 +59,7 @@ class OfferScoreSheetTabViewTest(TestCase):
         self.assertTemplateUsed(response, 'offer/score_sheet_address_tab.html')
         context_keys = self.COMMON_CONTEXT_KEYS + ['entity_id_selected', 'form']
         self.assert_list_contains(list(response.context.keys()), context_keys)
-        self.assertEqual(response.context['offer_year'], self.egy)
+        self.assertEqual(response.context['education_group_year'], self.egy)
 
     def assert_list_contains(self, container, member):
         self.assertFalse([item for item in member if item not in container])

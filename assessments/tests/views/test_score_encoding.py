@@ -47,6 +47,7 @@ from base.models.enums import number_session, academic_calendar_type
 from base.models.exam_enrollment import ExamEnrollment
 from base.tests.factories.academic_calendar import AcademicCalendarFactory
 from base.tests.factories.academic_year import AcademicYearFactory
+from base.tests.factories.education_group_year import EducationGroupYearFactory
 from base.tests.factories.group import ProgramManagerGroupFactory, TutorGroupFactory
 from base.tests.factories.learning_unit_year import LearningUnitYearFactory
 from base.tests.factories.offer_year import OfferYearFactory
@@ -54,6 +55,7 @@ from base.tests.factories.offer_year_calendar import OfferYearCalendarFactory
 from base.tests.factories.person import PersonFactory
 from base.tests.factories.program_manager import ProgramManagerFactory
 from base.tests.factories.session_exam_calendar import SessionExamCalendarFactory
+from base.tests.factories.session_examen import SessionExamFactory
 from base.tests.factories.student import StudentFactory
 from base.tests.mixin.academic_year import AcademicYearMockMixin
 from base.tests.mixin.session_exam_calendar import SessionExamCalendarMockMixin
@@ -422,12 +424,24 @@ class GetScoreEncodingViewProgramManagerTest(AcademicYearMockMixin, SessionExamC
 
         # Set user as program manager of two offer
         academic_year = _get_academic_year(2017)
-        self.offer_year_bio2ma = OfferYearFactory(acronym="BIO2MA", title="Master en Biologie",
-                                                  academic_year=academic_year)
-        self.offer_year_bio2bac = OfferYearFactory(acronym="BIO2BAC", title="Bachelier en Biologie",
-                                                   academic_year=academic_year)
-        ProgramManagerFactory(offer_year=self.offer_year_bio2ma, person=self.person)
-        ProgramManagerFactory(offer_year=self.offer_year_bio2bac, person=self.person)
+        self.egy1 = EducationGroupYearFactory(academic_year=academic_year)
+        self.egy2 = EducationGroupYearFactory(academic_year=academic_year)
+        ProgramManagerFactory(
+            person=self.person,
+            offer_year=OfferYearFactory(academic_year=self.egy1.academic_year, acronym=self.egy1.acronym),
+            education_group=self.egy1.education_group
+        )
+        ProgramManagerFactory(
+            person=self.person,
+            offer_year=OfferYearFactory(academic_year=self.egy2.academic_year, acronym=self.egy2.acronym),
+            education_group=self.egy2.education_group
+        )
+        # self.offer_year_bio2ma = OfferYearFactory(acronym="BIO2MA", title="Master en Biologie",
+        #                                           academic_year=academic_year)
+        # self.offer_year_bio2bac = OfferYearFactory(acronym="BIO2BAC", title="Bachelier en Biologie",
+        #                                            academic_year=academic_year)
+        # ProgramManagerFactory(offer_year=self.offer_year_bio2ma, person=self.person)
+        # ProgramManagerFactory(offer_year=self.offer_year_bio2bac, person=self.person)
 
         # Create an score submission event - with an session exam
         academic_calendar = AcademicCalendarFactory(title="Submission of score encoding - 1",
@@ -438,25 +452,33 @@ class GetScoreEncodingViewProgramManagerTest(AcademicYearMockMixin, SessionExamC
                                                                 number_session=number_session.ONE)
 
         # Offer : BIO2MA - 2 Learning unit with exam
-        self.offer_year_calendar_bio2ma = OfferYearCalendarFactory(offer_year=self.offer_year_bio2ma,
+        self.offer_year_calendar_bio2ma = OfferYearCalendarFactory(education_group_year=self.egy1,
+                                                                   offer_year=self.egy1.equivalent_offer_year,
                                                                    academic_calendar=academic_calendar)
 
         self.learning_unit_year = LearningUnitYearFactory(academic_year=academic_year)
         self.learning_unit_year_2 = LearningUnitYearFactory(academic_year=academic_year)
-        self.first_session_exam = test_session_exam.create_session_exam(number_session.ONE,
-                                                                        self.learning_unit_year,
-                                                                        self.offer_year_bio2ma)
-        self.first_session_exam_2 = test_session_exam.create_session_exam(number_session.ONE,
-                                                                          self.learning_unit_year_2,
-                                                                          self.offer_year_bio2ma)
+        self.first_session_exam = SessionExamFactory(
+            number_session=number_session.ONE,
+            learning_unit_year=self.learning_unit_year,
+            education_group_year=self.egy1
+        )
+        self.first_session_exam_2 = SessionExamFactory(
+            number_session=number_session.ONE,
+            learning_unit_year=self.learning_unit_year_2,
+            education_group_year=self.egy1
+        )
 
         # Offer: BIO2BAC - 1 learning unit with exam
-        self.offer_year_calendar_bio2bac = OfferYearCalendarFactory(offer_year=self.offer_year_bio2ma,
+        self.offer_year_calendar_bio2bac = OfferYearCalendarFactory(education_group_year=self.egy2,
+                                                                    offer_year=self.egy2.equivalent_offer_year,
                                                                     academic_calendar=academic_calendar)
         self.learning_unit_year_3 = LearningUnitYearFactory(academic_year=academic_year)
-        self.first_session_exam_3 = test_session_exam.create_session_exam(number_session.ONE,
-                                                                          self.learning_unit_year_3,
-                                                                          self.offer_year_bio2bac)
+        self.first_session_exam_3 = SessionExamFactory(
+            number_session=number_session.ONE,
+            learning_unit_year=self.learning_unit_year_3,
+            education_group_year=self.egy2
+        )
 
         self._create_context_exam_enrollment()
         # Mock academic_year / session_exam_calendar in order to be decouple from system time
@@ -488,7 +510,7 @@ class GetScoreEncodingViewProgramManagerTest(AcademicYearMockMixin, SessionExamC
             if index < 5:
                 # For the 5 first students register to the BIO2MA
                 offer_enrollment = test_offer_enrollment.create_offer_enrollment(self.students[index],
-                                                                                 self.offer_year_bio2ma)
+                                                                                 self.egy1)
                 learning_unit_enrollment = test_learning_unit_enrollment.create_learning_unit_enrollment(
                                                                               offer_enrollment=offer_enrollment,
                                                                               learning_unit_year=self.learning_unit_year)
@@ -499,7 +521,7 @@ class GetScoreEncodingViewProgramManagerTest(AcademicYearMockMixin, SessionExamC
                 test_exam_enrollment.create_exam_enrollment(self.first_session_exam_2, learning_unit_enrollment_2)
             else:
                 # For the other register to the BIO2BAC
-                offer_enrollment = test_offer_enrollment.create_offer_enrollment(self.students[index], self.offer_year_bio2bac)
+                offer_enrollment = test_offer_enrollment.create_offer_enrollment(self.students[index], self.egy2)
                 learning_unit_enrollment = test_learning_unit_enrollment.create_learning_unit_enrollment(offer_enrollment=offer_enrollment,
                                                                                                          learning_unit_year=self.learning_unit_year_3)
                 test_exam_enrollment.create_exam_enrollment(self.first_session_exam_3, learning_unit_enrollment)

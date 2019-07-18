@@ -47,6 +47,7 @@ from base.models.enums.constraint_type import CONSTRAINT_TYPE, CREDITS
 from base.models.enums.education_group_types import MiniTrainingType, TrainingType, GroupType
 from base.models.enums.funding_codes import FundingCodes
 from base.models.exceptions import MaximumOneParentAllowedException, ValidationWarning
+from base.models.offer_year import OfferYear
 from base.models.utils.utils import get_object_or_none
 from base.models.validation_rule import ValidationRule
 from osis_common.models.serializable_model import SerializableModel, SerializableModelManager, SerializableModelAdmin, \
@@ -917,6 +918,7 @@ class EducationGroupYear(SerializableModel):
             return self.education_group.educationgroupyear_set.get(academic_year__year=(self.academic_year.year - 1))
         except EducationGroupYear.DoesNotExist:
             return None
+
     @property
     def equivalent_offer_year(self):
         return OfferYear.objects.get(acronym=self.acronym, academic_year=self.academic_year)

@@ -64,7 +64,7 @@ class ProgramManagerListView(ListView):
 
         return qs.filter(education_group__educationgroupyear__in=education_group_years).order_by(
             'person__last_name', 'person__first_name', 'pk'
-        ).select_related('person', 'education_group__educationgroupyear__academic_year')
+        ).select_related('person')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -182,7 +182,11 @@ class ProgramManagerCreateView(ProgramManagerMixin, FormView):
 
         person = form.cleaned_data['person']
         for egy in education_group_years:
-            ProgramManager.objects.get_or_create(person=person, education_group=egy.education_group)
+            ProgramManager.objects.get_or_create(
+                person=person,
+                education_group=egy.education_group,
+                offer_year=egy.equivalent_offer_year
+            )
 
         return super().form_valid(form)
 

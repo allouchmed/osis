@@ -34,6 +34,7 @@ def create_date_enrollment():
 
 def create_offer_enrollment(student, egy):
     an_offer_enrollment = OfferEnrollment(date_enrollment=create_date_enrollment(),
-                                          student=student, education_group_year=egy)
+                                          student=student, education_group_year=egy,
+                                          offer_year=egy.equivalent_offer_year)
     an_offer_enrollment.save()
     return an_offer_enrollment

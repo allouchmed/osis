@@ -35,6 +35,7 @@ from base.tests.factories.offer_type import OfferTypeFactory
 class OfferYearFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = "base.OfferYear"
+        django_get_or_create = ('acronym', 'academic_year',)
         exclude = ("corresponding_education_group_year",)
 
     offer = factory.SubFactory(OfferFactory)

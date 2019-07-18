@@ -31,6 +31,7 @@ from django.db import IntegrityError
 from django.test import TestCase, RequestFactory
 
 from assessments.views import pgm_manager_administration
+from base.models.offer_year import OfferYear
 from base.models.program_manager import ProgramManager
 from base.tests.factories.academic_year import AcademicYearFactory
 from base.tests.factories.education_group_year import EducationGroupYearFactory
@@ -73,57 +74,81 @@ class PgmManagerAdministrationTest(TestCase):
         self.assertEqual(len(pgm_manager_administration.get_managed_entities([{'root': self.structure_child2}])), 3)
 
     def test_remove_pgm_manager(self):
-        offer_year1 = OfferYearFactory(academic_year=self.academic_year_current)
-        offer_year2 = OfferYearFactory(academic_year=self.academic_year_current)
-        pgm1 = ProgramManagerFactory(person=self.person, offer_year=offer_year1)
-        pgm2 = ProgramManagerFactory(person=self.person, offer_year=offer_year2)
+        egy1 = EducationGroupYearFactory(academic_year=self.academic_year_current)
+        egy2 = EducationGroupYearFactory(academic_year=self.academic_year_current)
+        pgm1 = ProgramManagerFactory(
+            person=self.person,
+            offer_year=OfferYearFactory(academic_year=egy1.academic_year, acronym=egy1.acronym),
+            education_group=egy1.education_group
+        )
+        pgm2 = ProgramManagerFactory(
+            person=self.person,
+            offer_year=OfferYearFactory(academic_year=egy2.academic_year, acronym=egy2.acronym),
+            education_group=egy2.education_group
+        )
         response = self.client.get(
-            reverse('delete_manager', args=[pgm1.pk]) + "?offer_year={},{}".format(
-                offer_year1.pk,
-                offer_year2.pk
+            reverse('delete_manager', args=[pgm1.pk]) + "?education_group_year={},{}".format(
+                egy1.pk,
+                egy2.pk
             )
         )
         self.assertEqual(response.context['other_programs'].get(), pgm2)
 
         self.client.post(
-            reverse('delete_manager', args=[pgm1.pk]) + "?offer_year={},{}".format(offer_year1.pk, offer_year2.pk)
+            reverse('delete_manager', args=[pgm1.pk]) + "?education_group_year={},{}".format(egy1.pk, egy2.pk)
         )
         self.assertFalse(ProgramManager.objects.filter(pk=pgm1.pk).exists())
         self.assertTrue(ProgramManager.objects.filter(pk=pgm2.pk).exists())
 
     def test_remove_multiple_pgm_manager(self):
-        offer_year1 = OfferYearFactory(academic_year=self.academic_year_current)
-        offer_year2 = OfferYearFactory(academic_year=self.academic_year_current)
-        pgm1 = ProgramManagerFactory(person=self.person, offer_year=offer_year1)
-        pgm2 = ProgramManagerFactory(person=self.person, offer_year=offer_year2)
+        egy1 = EducationGroupYearFactory(academic_year=self.academic_year_current)
+        egy2 = EducationGroupYearFactory(academic_year=self.academic_year_current)
+        pgm1 = ProgramManagerFactory(
+            person=self.person,
+            offer_year=OfferYearFactory(academic_year=egy1.academic_year, acronym=egy1.acronym),
+            education_group=egy1.education_group
+        )
+        pgm2 = ProgramManagerFactory(
+            person=self.person,
+            offer_year=OfferYearFactory(academic_year=egy2.academic_year, acronym=egy2.acronym),
+            education_group=egy2.education_group
+        )
 
         response = self.client.get(
-            reverse('delete_manager_person', args=[self.person.pk]) + "?offer_year={},{}".format(
-                offer_year1.pk,
-                offer_year2.pk
+            reverse('delete_manager_person', args=[self.person.pk]) + "?education_group_year={},{}".format(
+                egy1.pk,
+                egy2.pk
             )
         )
         self.assertFalse(response.context['other_programs'])
 
         self.client.post(
-            reverse('delete_manager_person', args=[self.person.pk]) + "?offer_year={},{}".format(
-                offer_year1.pk,
-                offer_year2.pk
+            reverse('delete_manager_person', args=[self.person.pk]) + "?education_group_year={},{}".format(
+                egy1.pk,
+                egy2.pk
             )
         )
         self.assertFalse(ProgramManager.objects.filter(pk=pgm1.pk).exists())
         self.assertFalse(ProgramManager.objects.filter(pk=pgm2.pk).exists())
 
     def test_main_programmanager_update(self):
-        offer_year1 = OfferYearFactory(academic_year=self.academic_year_current)
-        offer_year2 = OfferYearFactory(academic_year=self.academic_year_current)
-        pgm1 = ProgramManagerFactory(person=self.person, offer_year=offer_year1, is_main=False)
-        pgm2 = ProgramManagerFactory(person=self.person, offer_year=offer_year2, is_main=False)
+        egy1 = EducationGroupYearFactory(academic_year=self.academic_year_current)
+        egy2 = EducationGroupYearFactory(academic_year=self.academic_year_current)
+        pgm1 = ProgramManagerFactory(
+            person=self.person,
+            offer_year=OfferYearFactory(academic_year=egy1.academic_year, acronym=egy1.acronym),
+            education_group=egy1.education_group
+        )
+        pgm2 = ProgramManagerFactory(
+            person=self.person,
+            offer_year=OfferYearFactory(academic_year=egy2.academic_year, acronym=egy2.acronym),
+            education_group=egy2.education_group
+        )
 
         self.client.post(
-            reverse('update_main_person', args=[self.person.pk]) + "?offer_year={},{}".format(
-                offer_year1.pk,
-                offer_year2.pk
+            reverse('update_main_person', args=[self.person.pk]) + "?education_group_year={},{}".format(
+                egy1.pk,
+                egy2.pk
             ), data={'is_main': 'true'}
         )
         pgm1.refresh_from_db()
@@ -132,9 +157,9 @@ class PgmManagerAdministrationTest(TestCase):
         self.assertTrue(pgm2.is_main)
 
         self.client.post(
-            reverse('update_main', args=[pgm1.pk]) + "?offer_year={},{}".format(
-                offer_year1.pk,
-                offer_year2.pk
+            reverse('update_main', args=[pgm1.pk]) + "?education_group_year={},{}".format(
+                egy1.pk,
+                egy2.pk
             ), data={'is_main': 'false'}
         )
         pgm1.refresh_from_db()
@@ -143,13 +168,21 @@ class PgmManagerAdministrationTest(TestCase):
         self.assertTrue(pgm2.is_main)
 
     def test_list_pgm_manager(self):
-        offer_year1 = OfferYearFactory(academic_year=self.academic_year_current)
-        offer_year2 = OfferYearFactory(academic_year=self.academic_year_current)
-        pgm1 = ProgramManagerFactory(person=self.person, offer_year=offer_year1)
-        pgm2 = ProgramManagerFactory(person=self.person, offer_year=offer_year2)
+        egy1 = EducationGroupYearFactory(academic_year=self.academic_year_current)
+        egy2 = EducationGroupYearFactory(academic_year=self.academic_year_current)
+        pgm1 = ProgramManagerFactory(
+            person=self.person,
+            offer_year=OfferYearFactory(academic_year=egy1.academic_year, acronym=egy1.acronym),
+            education_group=egy1.education_group
+        )
+        pgm2 = ProgramManagerFactory(
+            person=self.person,
+            offer_year=OfferYearFactory(academic_year=egy2.academic_year, acronym=egy2.acronym),
+            education_group=egy2.education_group
+        )
 
         response = self.client.get(
-            reverse('manager_list'), data={'offer_year': [offer_year1.pk, offer_year2.pk]}
+            reverse('manager_list'), data={'education_group_year': [egy1.pk, egy2.pk]}
         )
         self.assertEqual(
             response.context['by_person'], {self.person: [pgm1, pgm2]}
@@ -258,13 +291,15 @@ class PgmManagerAdministrationTest(TestCase):
         self.assertEqual(len(pgm_manager_administration.get_entity_list(None, entity_parent1)), 6)
 
     def test_add_program_managers(self):
-        offer_year1 = OfferYearFactory(academic_year=self.academic_year_current,
-                                       entity_management=self.structure_parent1)
-        offer_year2 = OfferYearFactory(academic_year=self.academic_year_current,
-                                       entity_management=self.structure_parent1)
+        egy1 = EducationGroupYearFactory(academic_year=self.academic_year_current)
+        OfferYearFactory(academic_year=self.academic_year_current,
+                         acronym=egy1.acronym)
+        egy2 = EducationGroupYearFactory(academic_year=self.academic_year_current)
+        OfferYearFactory(academic_year=self.academic_year_current,
+                         acronym=egy2.acronym)
 
         self.client.post(
-            reverse("create_manager_person") + "?offer_year={},{}".format(offer_year1.pk, offer_year2.pk),
+            reverse("create_manager_person") + "?education_group_year={},{}".format(egy1.pk, egy2.pk),
             data={'person': self.person.pk}
         )
         self.assertEqual(ProgramManager.objects.filter(person=self.person).count(), 2)
