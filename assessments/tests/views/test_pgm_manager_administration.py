@@ -31,11 +31,11 @@ from django.db import IntegrityError
 from django.test import TestCase, RequestFactory
 
 from assessments.views import pgm_manager_administration
-from base.models.offer_year import OfferYear
 from base.models.program_manager import ProgramManager
 from base.tests.factories.academic_year import AcademicYearFactory
 from base.tests.factories.education_group_year import EducationGroupYearFactory
 from base.tests.factories.entity_manager import EntityManagerFactory
+from base.tests.factories.entity_version import EntityVersionFactory
 from base.tests.factories.group import ProgramManagerGroupFactory
 from base.tests.factories.offer_year import OfferYearFactory
 from base.tests.factories.person import PersonFactory
@@ -52,26 +52,20 @@ class PgmManagerAdministrationTest(TestCase):
         cls.user = SuperUserFactory()
         cls.person = PersonFactory()
 
-        cls.structure_parent1 = StructureFactory(acronym='SSH')
+        cls.entity_version_parent1 = EntityVersionFactory()
 
-        cls.structure_child1 = StructureFactory(acronym='TECO', part_of=cls.structure_parent1)
-        cls.structure_child11 = StructureFactory(acronym='TEBI', part_of=cls.structure_child1)
+        cls.entity_version_child1 = EntityVersionFactory(parent=cls.entity_version_parent1.entity)
+        cls.entity_version_child11 = EntityVersionFactory(parent=cls.entity_version_child1.entity)
 
-        cls.structure_child2 = StructureFactory(acronym='ESPO', part_of=cls.structure_parent1)
-        cls.structure_child21 = StructureFactory(acronym='ECON', part_of=cls.structure_child2)
-        cls.structure_child22 = StructureFactory(acronym='COMU', part_of=cls.structure_child2)
-        EntityManagerFactory(person__user=cls.user, structure=cls.structure_parent1)
+        cls.entity_version_child2 = EntityVersionFactory(parent=cls.entity_version_parent1.entity)
+        cls.entity_version_child21 = EntityVersionFactory(parent=cls.entity_version_child2.entity)
+        cls.entity_version_child22 = EntityVersionFactory(parent=cls.entity_version_child2.entity)
+        EntityManagerFactory(person__user=cls.user, entity=cls.entity_version_parent1.entity)
 
         cls.academic_year_previous, cls.academic_year_current = AcademicYearFactory.produce_in_past(quantity=2)
 
-    def setUp(self) -> None:
+    def setUp(self):
         self.client.force_login(self.user)
-
-    def test_find_children_entities_from_acronym(self):
-        self.assertIsNone(pgm_manager_administration.get_managed_entities(None))
-
-        self.assertEqual(len(pgm_manager_administration.get_managed_entities([{'root': self.structure_parent1}])), 6)
-        self.assertEqual(len(pgm_manager_administration.get_managed_entities([{'root': self.structure_child2}])), 3)
 
     def test_remove_pgm_manager(self):
         egy1 = EducationGroupYearFactory(academic_year=self.academic_year_current)
@@ -188,65 +182,39 @@ class PgmManagerAdministrationTest(TestCase):
             response.context['by_person'], {self.person: [pgm1, pgm2]}
         )
 
-    def test_offer_year_queried_by_academic_year(self):
-        an_entity_management = StructureFactory()
-        OfferYearFactory(academic_year=self.academic_year_previous, entity_management=an_entity_management)
-        OfferYearFactory(academic_year=self.academic_year_current, entity_management=an_entity_management)
-        OfferYearFactory(academic_year=self.academic_year_current, entity_management=an_entity_management)
+    def test_education_group_year_queried_by_academic_year(self):
+        an_entity_management = EntityVersionFactory()
+        EducationGroupYearFactory(academic_year=self.academic_year_previous, management_entity=an_entity_management.entity)
+        EducationGroupYearFactory(academic_year=self.academic_year_current, management_entity=an_entity_management.entity)
+        EducationGroupYearFactory(academic_year=self.academic_year_current, management_entity=an_entity_management.entity)
 
         self.assertEqual(len(pgm_manager_administration._get_programs(self.academic_year_current,
-                                                                      [an_entity_management],
+                                                                      [an_entity_management.entity],
                                                                       None,
                                                                       None)), 2)
         self.assertEqual(len(pgm_manager_administration._get_programs(self.academic_year_previous,
-                                                                      [an_entity_management],
+                                                                      [an_entity_management.entity],
                                                                       None,
                                                                       None)), 1)
 
     def test_pgm_manager_queried_by_academic_year(self):
-        a_management_entity = StructureFactory()
-        offer_year_previous_year = OfferYearFactory(academic_year=self.academic_year_previous,
-                                                    entity_management=a_management_entity)
-        offer_year_current_year = OfferYearFactory(academic_year=self.academic_year_current,
-                                                   entity_management=a_management_entity)
+        a_management_entity = EntityVersionFactory()
+        egy_previous_year = EducationGroupYearFactory(
+            academic_year=self.academic_year_previous,
+            administration_entity=a_management_entity.entity
+        )
+        egy_current_year = EducationGroupYearFactory(
+            academic_year=self.academic_year_current,
+            administration_entity=a_management_entity.entity
+        )
         person_previous_year = PersonFactory()
         person_current_year = PersonFactory()
 
-        ProgramManagerFactory(person=person_previous_year, offer_year=offer_year_previous_year)
-        ProgramManagerFactory(person=person_current_year, offer_year=offer_year_current_year)
+        ProgramManagerFactory(person=person_previous_year, education_group=egy_previous_year.education_group)
+        ProgramManagerFactory(person=person_current_year, education_group=egy_current_year.education_group)
 
         self.assertEqual(len(pgm_manager_administration._get_entity_program_managers([{'root': a_management_entity}],
                                                                                      self.academic_year_current)), 1)
-
-    def test_get_administrator_entities(self):
-        a_person = PersonFactory(user=self.user)
-        root_acronyms = ['A', 'B']
-        child_acronyms = ['AA', 'BB']
-
-        structure_root_1 = StructureFactory(acronym=root_acronyms[0])
-
-        StructureFactory(acronym=child_acronyms[0], part_of=structure_root_1)
-        StructureFactory(acronym=child_acronyms[1], part_of=structure_root_1)
-
-        structure_root_2 = StructureFactory(acronym=root_acronyms[1])
-
-        EntityManagerFactory(person=a_person,
-                             structure=structure_root_1)
-        EntityManagerFactory(person=a_person,
-                             structure=structure_root_2)
-
-        data = pgm_manager_administration.get_administrator_entities(self.user)
-        self.assertEqual(data[0]['root'], structure_root_1)
-        self.assertEqual(len(data[0]['structures']), 3)
-        self.assertEqual(data[1]['root'], structure_root_2)
-        self.assertEqual(len(data[1]['structures']), 1)
-
-    def test_get_entity_root(self):
-        a_structure = StructureFactory()
-        self.assertEqual(pgm_manager_administration.get_entity_root(a_structure.id), a_structure)
-
-    def test_get_entity_root_with_none(self):
-        self.assertIsNone(pgm_manager_administration.get_entity_root(None))
 
     @mock.patch('django.contrib.auth.decorators')
     def test_get_entity_root_selected_all(self, mock_decorators):
@@ -267,28 +235,7 @@ class PgmManagerAdministrationTest(TestCase):
         self.assertEqual(pgm_manager_administration.get_filter_value(request, 'offer_type'), '1')
 
     def test_get_entity_list_for_one_entity(self):
-        entity_parent1 = StructureFactory(acronym='P1')
-
-        entity_child1 = StructureFactory(acronym='C1', part_of=entity_parent1)
-        StructureFactory(acronym='C11', part_of=entity_child1)
-
-        entity_child2 = StructureFactory(acronym='C2', part_of=entity_parent1)
-        StructureFactory(acronym='C21', part_of=entity_child2)
-        StructureFactory(acronym='C22', part_of=entity_child2)
-
-        self.assertEqual(len(pgm_manager_administration.get_entity_list(entity_child1.id, None)), 1)
-
-    def test_get_entity_list_for_entity_hierarchy(self):
-        entity_parent1 = StructureFactory(acronym='P1')
-
-        entity_child1 = StructureFactory(acronym='C1', part_of=entity_parent1)
-        StructureFactory(acronym='C11', part_of=entity_child1)
-
-        entity_child2 = StructureFactory(acronym='P2', part_of=entity_parent1)
-        StructureFactory(acronym='P21', part_of=entity_child2)
-        StructureFactory(acronym='P22', part_of=entity_child2)
-
-        self.assertEqual(len(pgm_manager_administration.get_entity_list(None, entity_parent1)), 6)
+        self.assertEqual(len(pgm_manager_administration.get_entity_list(self.entity_version_parent1.id, None)), 1)
 
     def test_add_program_managers(self):
         egy1 = EducationGroupYearFactory(academic_year=self.academic_year_current)

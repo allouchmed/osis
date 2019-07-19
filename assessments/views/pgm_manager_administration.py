@@ -42,7 +42,6 @@ from base import models as mdl
 from base.models.education_group_year import EducationGroupYear
 from base.models.entity_manager import is_entity_manager, has_perm_entity_manager
 from base.models.offer_type import OfferType
-from base.models.offer_year import OfferYear
 from base.models.person import Person
 from base.models.program_manager import ProgramManager
 from base.views.mixins import AjaxTemplateMixin
@@ -277,7 +276,7 @@ def get_administrator_entities(a_user):
     for entity_managed in mdl.entity_manager.find_by_user(a_user):
         root_version = entity_managed.entity.get_latest_entity_version()
         structures.append({'root': root_version,
-                           'children': root_version.children})
+                           'children': list(root_version.children) + [root_version]})
     return structures
 
 
