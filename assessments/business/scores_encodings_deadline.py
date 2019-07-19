@@ -34,6 +34,8 @@ from base.models.session_exam_deadline import SessionExamDeadline
 
 logger = logging.getLogger(settings.DEFAULT_LOGGER)
 
+# FIXME Optimize queries
+
 
 def recompute_all_deadlines(academic_calendar):
     if academic_calendar.reference == ac_type.SCORES_EXAM_SUBMISSION:
@@ -59,7 +61,9 @@ def compute_deadline_by_student(session_exam_deadline):
 def compute_deadline(off_year_calendar, session_exam_deadlines=None):
     if not _impact_scores_encodings_deadlines(off_year_calendar):
         return
-
+    # FIXME Remove when education group year becomes mandatory
+    if not off_year_calendar.education_group_year:
+        return
     oyc_deliberation = _find_by_reference(off_year_calendar, ac_type.DELIBERATION)
     oyc_scores_exam_submission = _find_by_reference(off_year_calendar, ac_type.SCORES_EXAM_SUBMISSION)
 

@@ -72,7 +72,7 @@ class OfferYearCalendar(AbstractCalendar):
         return bool(self.start_date and self.end_date)
 
     def __str__(self):
-        return u"%s - %s" % (self.academic_calendar, self.offer_year)
+        return u"%s - %s" % (self.academic_calendar, self.education_group_year)
 
 
 def find_offer_year_events(offer_yr):

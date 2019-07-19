@@ -23,6 +23,7 @@
 #    see http://www.gnu.org/licenses/.
 #
 ##############################################################################
+import itertools
 import json
 from collections import OrderedDict
 
@@ -212,10 +213,10 @@ def pgm_manager_search(request):
     if person_id:
         manager_person = get_object_or_404(Person, pk=person_id)
 
-    entity_selected = get_filter_value(request, 'entity')  # if an acronym is selected this value is not none
+    entity_selected_id = get_filter_value(request, 'entity')  # if an acronym is selected this value is not none
     entity_root_selected = None  # if an 'all hierarchy of' is selected this value is not none
 
-    if entity_selected is None:
+    if entity_selected_id is None:
         entity_root_selected = get_entity_root_selected(request)
 
     pgm_offer_type = get_filter_value(request, 'offer_type')
@@ -229,23 +230,17 @@ def pgm_manager_search(request):
         'person': manager_person,
         'administrator_entities_string': _get_administrator_entities_acronym_list(administrator_entities),
         'entities_managed_root': administrator_entities,
-        'entity_selected': entity_selected,
+        'entity_selected': entity_selected_id,
         'entity_root_selected': entity_root_selected,
         'offer_types': OfferType.objects.exclude(name__in=EXCLUDE_OFFER_TYPE_SEARCH),
         'pgms': _get_programs(current_academic_yr,
-                              get_entity_list(entity_selected, get_entity_root(entity_root_selected)),
+                              get_entity_list(entity_selected_id, administrator_entities),
                               manager_person,
                               pgm_offer_type),
         'managers': _get_entity_program_managers(administrator_entities, current_academic_yr),
         'offer_type': pgm_offer_type
     }
     return render(request, "admin/pgm_manager.html", data)
-
-
-def get_entity_root(entity_selected):
-    if entity_selected:
-        return mdl.structure.find_by_id(entity_selected)
-    return None
 
 
 def get_entity_root_selected(request):
@@ -266,15 +261,16 @@ def get_managed_entities(entity_managed_list):
     return None
 
 
-def get_entity_list(entity, entity_managed_structure):
-    if entity:
-        entity_found = mdl.structure.find_by_id(entity)
+def get_entity_list(entity_id, administrator_entities):
+    if entity_id:
+        entity_found = mdl.entity_version.find_by_id(entity_id)
         if entity_found:
-            return [entity_found]
+            return [entity_found.entity]
     else:
-        children_acronyms = find_values('acronym', json.dumps(entity_managed_structure.serializable_object()))
-        return mdl.structure.find_by_acronyms(children_acronyms)
-
+        entity_versions = list(itertools.chain.from_iterable(
+            (struct["children"] for struct in administrator_entities)
+        ))
+        return [ev.entity for ev in entity_versions]
     return None
 
 
@@ -290,29 +286,32 @@ def get_filter_value(request, value_name):
 def get_administrator_entities(a_user):
     structures = []
     for entity_managed in mdl.entity_manager.find_by_user(a_user):
-        children_acronyms = find_values('acronym', json.dumps(entity_managed.structure.serializable_object()))
-        structures.append({'root': entity_managed.structure,
-                           'structures': mdl.structure.find_by_acronyms(children_acronyms)})
+        root_version = entity_managed.entity.get_latest_entity_version()
+        structures.append({'root': root_version,
+                           'children': root_version.children})
     return structures
 
 
 def _get_programs(academic_yr, entity_list, manager_person, an_offer_type):
-    qs = OfferYear.objects.filter(
+    qs = EducationGroupYear.objects.filter(
         academic_year=academic_yr,
-        entity_management__in=entity_list,
+        management_entity__in=entity_list
     )
 
-    if an_offer_type:
-        qs = qs.filter(offer_type=an_offer_type)
+    # FIXME Use educationgrouptype
+    # if an_offer_type:
+    #     qs = qs.filter(offer_type=an_offer_type)
 
     if manager_person:
-        qs = qs.filter(programmanager__person=manager_person)
+        qs = qs.filter(education_group__programmanager__person=manager_person)
     return qs.distinct()
 
 
 def _get_entity_program_managers(entity, academic_yr):
-    entities = get_managed_entities(entity)
-    return mdl.program_manager.find_by_management_entity(entities, academic_yr)
+    root_entities = [struct["root"] for struct in entity]
+    ordered_root_entities = sorted(root_entities, key=lambda entity_version: entity_version.acronym)
+
+    return mdl.program_manager.find_by_management_entity([ev.entity for ev in ordered_root_entities], academic_yr)
 
 
 def find_values(key_value, json_repr):

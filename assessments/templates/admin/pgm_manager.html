@@ -48,7 +48,7 @@
                                     <option value="all_{{ e.root.id }}"
                                             {% if e.root.id|slugify == entity_root_selected %}
                                             selected {% endif %}>{% trans 'All hierarchy of ' %} {{ e.root.acronym }}</option>
-                                    {% for e in e.structures %}
+                                    {% for e in e.children %}
                                         {% if e.id|slugify == entity_selected %}
                                             <option selected value="{{ e.id }}">{{ e.acronym }}</option>
                                         {% else %}

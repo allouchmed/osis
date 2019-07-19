@@ -113,9 +113,9 @@ def find_by_user(user, academic_year=None):
 
 def find_by_management_entity(administration_entity, academic_yr):
     if administration_entity and academic_yr:
-        # FIXME Use education group instead
         return ProgramManager.objects \
-            .filter(offer_year__entity_management__in=administration_entity, offer_year__academic_year=academic_yr) \
+            .filter(education_group__educationgroupyear__administration_entity__in=administration_entity,
+                    education_group__educationgroupyear__academic_year=academic_yr) \
             .select_related('person') \
             .order_by('person__last_name', 'person__first_name') \
             .distinct('person__last_name', 'person__first_name')
