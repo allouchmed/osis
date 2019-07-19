@@ -51,20 +51,6 @@ class Structure(models.Model):
         return Structure.objects.filter(part_of=self.pk) \
             .order_by('acronym')
 
-    def serializable_object(self):
-        return {
-            'id': self.id,
-            'acronym': self.acronym,
-            'children': [child.serializable_object() for child in self.children]
-        }
-
-    def serializable_acronym(self):
-        acronyms = [self.acronym]
-        for child in self.children:
-            acronyms.append(child.acronym)
-            child.serializable_acronym()
-        return acronyms
-
     def __str__(self):
         return u"%s - %s" % (self.acronym, self.title)
 

@@ -250,17 +250,6 @@ def get_entity_root_selected(request):
     return entity_root_selected
 
 
-def get_managed_entities(entity_managed_list):
-    if entity_managed_list:
-        structures = []
-        for entity_managed in entity_managed_list:
-            children_acronyms = find_values('acronym', json.dumps(entity_managed['root'].serializable_object()))
-            structures.extend(mdl.structure.find_by_acronyms(children_acronyms))
-        return sorted(structures, key=lambda a_structure: a_structure.acronym)
-
-    return None
-
-
 def get_entity_list(entity_id, administrator_entities):
     if entity_id:
         entity_found = mdl.entity_version.find_by_id(entity_id)
