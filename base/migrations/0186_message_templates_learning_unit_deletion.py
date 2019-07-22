@@ -9,6 +9,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('base', '0185_programmanager_link_to_education_group'),
+        ('osis_common', '0001_initial')
     ]
 
     operations = [
