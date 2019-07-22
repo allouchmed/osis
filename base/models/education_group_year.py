@@ -934,6 +934,8 @@ def search(**kwargs):
             qs = qs.filter(id=kwargs['id'])
     if "academic_year" in kwargs:
         qs = qs.filter(academic_year=kwargs['academic_year'])
+    if kwargs.get("entity"):
+        qs = qs.filter(management_entity__entityversion__acronym=kwargs["entity"])
     if kwargs.get("acronym"):
         qs = qs.filter(acronym__icontains=kwargs['acronym'])
     if kwargs.get("title"):

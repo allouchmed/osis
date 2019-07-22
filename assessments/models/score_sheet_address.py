@@ -53,7 +53,8 @@ class ScoreSheetAddress(models.Model):
     city = models.CharField(max_length=255, blank=True, null=True)
     country = models.ForeignKey(
         'reference.Country',
-        blank=True, null=True,
+        blank=True,
+        null=True,
         on_delete=models.CASCADE
     )
     phone = models.CharField(max_length=30, blank=True, null=True, verbose_name=gettext_lazy("Phone"))

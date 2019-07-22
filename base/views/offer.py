@@ -42,10 +42,10 @@ def offers(request):
         academic_yr = academic_year_calendar.id
     return render(request, "offers.html", {'academic_year': academic_yr,
                                            'academic_years': academic_years,
-                                           'offers': [],
+                                           'education_group_years': [],
                                            'init': "1"})
 
-
+# FIXME Use form
 @login_required
 @permission_required('base.can_access_offer', raise_exception=True)
 def offers_search(request):
@@ -58,12 +58,11 @@ def offers_search(request):
 
     academic_years = AcademicYear.objects.all()
 
-    offer_years = mdl.offer_year.search(entity=entity, academic_yr=academic_yr, acronym=acronym) \
-        .select_related("entity_management", "academic_year")
-
+    egys = mdl.education_group_year.search(entity=entity, academic_year=academic_yr, acronym=acronym) \
+        .select_related("management_entity", "academic_year")
     return render(request, "offers.html", {'academic_year': academic_yr,
                                            'entity_acronym': entity,
                                            'code': acronym,
                                            'academic_years': academic_years,
-                                           'offer_years': offer_years,
+                                           'education_group_years': egys,
                                            'init': "0"})
