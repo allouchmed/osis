@@ -42,7 +42,7 @@ from base import models as mdl
 from base.models.education_group_type import EducationGroupType
 from base.models.education_group_year import EducationGroupYear
 from base.models.entity_manager import is_entity_manager, has_perm_entity_manager
-from base.models.offer_type import OfferType
+from base.models.enums import education_group_types
 from base.models.person import Person
 from base.models.program_manager import ProgramManager
 from base.views.mixins import AjaxTemplateMixin
@@ -50,7 +50,10 @@ from base.views.mixins import AjaxTemplateMixin
 ALL_OPTION_VALUE = "-"
 ALL_OPTION_VALUE_ENTITY = "all_"
 
-EXCLUDE_OFFER_TYPE_SEARCH = ('Master approfondi', "Master didactique", "Master spécialisé")
+EXCLUDE_OFFER_TYPE_SEARCH = (
+    education_group_types.TrainingType.PGRM_MASTER_120.name,
+    education_group_types.TrainingType.PGRM_MASTER_180_240.name
+)
 
 
 class ProgramManagerListView(ListView):
@@ -197,11 +200,14 @@ class ProgramManagerCreateView(ProgramManagerMixin, FormView):
 def pgm_manager_administration(request):
     administrator_entities = get_administrator_entities(request.user)
     current_academic_yr = mdl.academic_year.current_academic_year()
+    offer_types = EducationGroupType.objects.all().order_by_translated_name().exclude(
+        name__in=EXCLUDE_OFFER_TYPE_SEARCH
+    )
     return render(request, "admin/pgm_manager.html", {
         'academic_year': current_academic_yr,
         'administrator_entities_string': _get_administrator_entities_acronym_list(administrator_entities),
         'entities_managed_root': administrator_entities,
-        'offer_types': EducationGroupType.objects.all().order_by_translated_name().exclude(name__in=EXCLUDE_OFFER_TYPE_SEARCH),
+        'offer_types': offer_types,
         'managers': _get_entity_program_managers(administrator_entities, current_academic_yr),
         'init': '1'})
 
@@ -225,7 +231,9 @@ def pgm_manager_search(request):
     administrator_entities = get_administrator_entities(request.user)
 
     current_academic_yr = mdl.academic_year.current_academic_year()
-
+    offer_types = EducationGroupType.objects.all().order_by_translated_name().exclude(
+        name__in=EXCLUDE_OFFER_TYPE_SEARCH
+    )
     data = {
         'academic_year': current_academic_yr,
         'person': manager_person,
@@ -233,7 +241,7 @@ def pgm_manager_search(request):
         'entities_managed_root': administrator_entities,
         'entity_selected': entity_selected_id,
         'entity_root_selected': entity_root_selected,
-        'offer_types': EducationGroupType.objects.all().order_by_translated_name().exclude(name__in=EXCLUDE_OFFER_TYPE_SEARCH),
+        'offer_types': offer_types,
         'pgms': _get_programs(current_academic_yr,
                               get_entity_list(entity_selected_id, administrator_entities),
                               manager_person,
@@ -293,7 +301,7 @@ def _get_programs(academic_yr, entity_list, manager_person, an_offer_type):
 
     if manager_person:
         qs = qs.filter(education_group__programmanager__person=manager_person)
-    return qs.distinct()
+    return qs.distinct().exclude(education_group_type__name__in=EXCLUDE_OFFER_TYPE_SEARCH)
 
 
 def _get_entity_program_managers(entity, academic_yr):
