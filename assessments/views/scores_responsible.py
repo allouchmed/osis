@@ -48,6 +48,7 @@ def scores_responsible(request):
                                                        "init": "0"})
 
 
+# FIXME Too much queries
 @login_required
 @user_passes_test(is_entity_manager)
 def scores_responsible_search(request):

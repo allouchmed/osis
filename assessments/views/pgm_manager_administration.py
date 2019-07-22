@@ -39,6 +39,7 @@ from django.views.generic import ListView, DeleteView, FormView
 from django.views.generic.edit import BaseUpdateView
 
 from base import models as mdl
+from base.models.education_group_type import EducationGroupType
 from base.models.education_group_year import EducationGroupYear
 from base.models.entity_manager import is_entity_manager, has_perm_entity_manager
 from base.models.offer_type import OfferType
@@ -200,11 +201,12 @@ def pgm_manager_administration(request):
         'academic_year': current_academic_yr,
         'administrator_entities_string': _get_administrator_entities_acronym_list(administrator_entities),
         'entities_managed_root': administrator_entities,
-        'offer_types': OfferType.objects.exclude(name__in=EXCLUDE_OFFER_TYPE_SEARCH),
+        'offer_types': EducationGroupType.objects.all().order_by_translated_name().exclude(name__in=EXCLUDE_OFFER_TYPE_SEARCH),
         'managers': _get_entity_program_managers(administrator_entities, current_academic_yr),
         'init': '1'})
 
 
+# FIXME Use form for search
 @login_required
 def pgm_manager_search(request):
     person_id = get_filter_value(request, 'person')
@@ -231,7 +233,7 @@ def pgm_manager_search(request):
         'entities_managed_root': administrator_entities,
         'entity_selected': entity_selected_id,
         'entity_root_selected': entity_root_selected,
-        'offer_types': OfferType.objects.exclude(name__in=EXCLUDE_OFFER_TYPE_SEARCH),
+        'offer_types': EducationGroupType.objects.all().order_by_translated_name().exclude(name__in=EXCLUDE_OFFER_TYPE_SEARCH),
         'pgms': _get_programs(current_academic_yr,
                               get_entity_list(entity_selected_id, administrator_entities),
                               manager_person,
@@ -286,9 +288,8 @@ def _get_programs(academic_yr, entity_list, manager_person, an_offer_type):
         management_entity__in=entity_list
     )
 
-    # FIXME Use educationgrouptype
-    # if an_offer_type:
-    #     qs = qs.filter(offer_type=an_offer_type)
+    if an_offer_type:
+        qs = qs.filter(education_group_type__pk=an_offer_type)
 
     if manager_person:
         qs = qs.filter(education_group__programmanager__person=manager_person)

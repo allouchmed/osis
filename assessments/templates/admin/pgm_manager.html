@@ -64,9 +64,9 @@
                                 <option value="-">{% trans 'All' %}</option>
                                 {% for p in offer_types %}
                                     {% if p.id|slugify == offer_type %}
-                                        <option selected value="{{ p.id }}">{{ p.name }}</option>
+                                        <option selected value="{{ p.pk }}">{% trans p.get_name_display %}</option>
                                     {% else %}
-                                        <option value="{{ p.id }}">{{ p.name }}</option>
+                                        <option value="{{ p.pk }}">{% trans p.get_name_display %}</option>
                                     {% endif %}
                                 {% endfor %}
                             </select>
