@@ -59,7 +59,7 @@ class LearningUnitPrerequisiteTraining(LearningUnitGenericDetailView):
         context["prerequisite"] = get_object_or_none(Prerequisite,
                                                      learning_unit_year=luy,
                                                      education_group_year=root)
-        context["can_modify_prerequisite"] = perms.is_eligible_to_change_education_group(
+        context["can_modify_prerequisite"] = perms.is_eligible_to_change_prerequisite(
             context['person'],
             context["root"]
         )

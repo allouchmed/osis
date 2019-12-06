@@ -69,7 +69,9 @@
                                 </td>
                             {% else %}
                                 <td>
-                                    {% if form.instance.pk %}{{ form.DELETE }}{% endif %}
+                                    {% if can_change_coorganization %}
+                                        {% if form.instance.pk %}{{ form.DELETE }}{% endif %}
+                                    {% endif %}
                                 </td>
                             {% endif %}
                         {% endfor %}
@@ -86,8 +88,8 @@
 <script src="{% static 'js/jquery.formset.js' %}"></script>
 <script>
     $('.link-formset').formset({
-        addText: '<span class="fas fa-plus"></span>',
-        deleteText: '<span class="fas fa-trash-alt"></span>',
+        addText: {% if can_change_coorganization %} '<span class="fas fa-plus"></span>' {% else %} '' {% endif %},
+        deleteText:  {% if can_change_coorganization %} '<span class="fas fa-trash-alt"></span>' {% else %} '' {% endif %},
         prefix: '{{ form_coorganization.prefix }}',
         formTemplate: '#form_template',
         added: (function (row) {
