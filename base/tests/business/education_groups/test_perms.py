@@ -157,6 +157,42 @@ class TestPerms(TestCase):
         self.assertFalse(result)
 
 
+class TestEligibleToChangeEducationGroup(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.education_group_year = EducationGroupYearFactory()
+        cls.person = PersonFactory()
+
+    @mock.patch('base.business.education_groups.perms.check_permission', return_value=True)
+    @mock.patch('base.business.education_groups.perms._is_year_editable', return_value=True)
+    @mock.patch('base.business.education_groups.perms.check_link_to_management_entity', return_value=True)
+    def test_is_eligible_to_change_education_group_case_all_is_true(self, *args, **kwargs):
+        self.assertTrue(
+            perms.is_eligible_to_change_education_group(
+                person=self.person,
+                education_group=self.education_group_year,
+            )
+        )
+
+    @mock.patch('base.business.education_groups.perms.check_permission', return_value=True)
+    @mock.patch('base.business.education_groups.perms._is_year_editable', return_value=True)
+    @mock.patch('base.business.education_groups.perms.check_link_to_management_entity', return_value=True)
+    def test_is_eligible_to_change_education_group_case_on_false(self, mock_check_permission, mock_is_year_editable,
+                                                                 mock_check_link_to_management_entity):
+        subperms = [mock_check_permission, mock_is_year_editable, mock_check_link_to_management_entity]
+
+        for mock in subperms:
+            with self.subTest(mock=mock):
+                mock.return_value = False
+                self.assertFalse(
+                    perms.is_eligible_to_change_education_group(
+                        person=self.person,
+                        education_group=self.education_group_year,
+                    )
+                )
+                self.assertTrue(all(subperm.called for subperm in subperms))
+
+
 class TestCommonEducationGroupStrategyPerms(TestCase):
     @classmethod
     def setUpTestData(cls):
