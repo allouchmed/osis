@@ -32,7 +32,7 @@ from django import forms
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import PermissionRequiredMixin
-from django.db.models import Prefetch
+from django.db.models import Prefetch, Max
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
@@ -61,6 +61,7 @@ from base.models.education_group_year_domain import EducationGroupYearDomain
 from base.models.enums import education_group_categories, academic_calendar_type
 from base.models.enums.education_group_categories import TRAINING
 from base.models.enums.education_group_types import TrainingType, MiniTrainingType
+from base.models.enums.mandate_type import MANDATE_TYPES
 from base.models.group_element_year import find_learning_unit_formations, GroupElementYear
 from base.models.learning_unit_year import LearningUnitYear
 from base.models.mandatary import Mandatary
@@ -441,15 +442,20 @@ class EducationGroupAdministrativeData(EducationGroupGenericDetailView):
             education_group=self.object.education_group,
         ).order_by("person__last_name", "person__first_name")
 
-        mandataries = Mandatary.objects.filter(
-            mandate__education_group=self.object.education_group,
-            start_date__lte=self.object.academic_year.end_date,
-            end_date__gte=self.object.academic_year.start_date
-        ).order_by(
-            'mandate__function',
-            'person__last_name',
-            'person__first_name'
-        ).select_related("person", "mandate")
+        recent_mandataries = []
+        for fonction, label in dict(MANDATE_TYPES).items():
+            mandataries = Mandatary.objects.filter(
+                mandate__education_group=self.object.education_group,
+                start_date__lte=self.object.academic_year.end_date,
+                end_date__gte=self.object.academic_year.start_date,
+                mandate__function =fonction
+            ).order_by(
+                'start_date',
+                'mandate__function',
+                'person__last_name',
+                'person__first_name'
+            ).select_related("person", "mandate")
+            recent_mandataries.append(mandataries.last())
 
         course_enrollment_dates = OfferYearCalendar.objects.filter(
             education_group_year=self.object,
@@ -459,7 +465,7 @@ class EducationGroupAdministrativeData(EducationGroupGenericDetailView):
 
         context.update({
             'course_enrollment_dates': course_enrollment_dates,
-            'mandataries': mandataries,
+            'mandataries': recent_mandataries,
             'pgm_mgrs': pgm_mgrs,
             "can_edit_administrative_data": can_user_edit_administrative_data(self.request.user, self.object)
         })
