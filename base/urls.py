@@ -42,12 +42,7 @@ import base.views.learning_units.search.service_course
 import base.views.learning_units.search.simple
 import base.views.learning_units.update
 from attribution.views import attribution, tutor_application
-from attribution.views.charge_repartition.create import SelectAttributionView, AddChargeRepartition
-from attribution.views.charge_repartition.update import EditChargeRepartition
-from attribution.views.learning_unit.create import CreateAttribution
-from attribution.views.learning_unit.delete import DeleteAttribution
-from attribution.views.learning_unit.update import UpdateAttributionView
-from base.views import learning_achievement, search, education_groups, user_list
+from base.views import learning_achievement, search, user_list
 from base.views import learning_unit, offer, common, institution, organization, academic_calendar, \
     my_osis, entity, student, notifications
 from base.views import teaching_material
@@ -61,6 +56,8 @@ from base.views.learning_units.proposal import create, update
 from base.views.learning_units.update import update_learning_unit, learning_unit_edition_end_date
 from base.views.organization import OrganizationAutocomplete, CountryAutocomplete, CampusAutocomplete
 from base.views.person import EmployeeAutocomplete
+from base.views.academic_actor import AcademicActorsSearch
+
 
 urlpatterns = [
     url(r'^$', common.home, name='home'),
@@ -101,6 +98,7 @@ urlpatterns = [
 
     url(r'^academic_actors/', include([
         url(r'^$', institution.academic_actors, name='academic_actors'),
+        url(r'^overview/$', AcademicActorsSearch.as_view(), name='academic_actors_overview'),
     ])),
 
     url(r'^academic_calendars/', include([

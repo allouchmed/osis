@@ -24,9 +24,12 @@
 #
 ##############################################################################
 from django.conf import settings
+from base.models.person import find_by_user
 
 
 def view_academicactors(user):
+    person = find_by_user(user)
     return user.has_perm('base.view_programmanager') \
            or ("assessments" in settings.INSTALLED_APPS and user.has_perm('assessments.view_scoresresponsible')) \
-           or ("dissertation" in settings.INSTALLED_APPS and user.has_perm('dissertation.change_offerproposition'))
+           or ("dissertation" in settings.INSTALLED_APPS and user.has_perm('dissertation.change_offerproposition')) \
+           or (person.is_entity_manager)

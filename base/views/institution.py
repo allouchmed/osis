@@ -130,3 +130,8 @@ def get_entity_address(request, entity_version_id):
             'fax': entity.fax,
         }
     return JsonResponse(response)
+
+@login_required
+@user_passes_test(view_academicactors)
+def academic_actors_overview(request):
+    return render(request, "academic_actors_overview.html", {})
