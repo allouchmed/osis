@@ -23,6 +23,7 @@
 # ############################################################################
 import time
 
+from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.select import Select
@@ -116,10 +117,10 @@ class CkeditorField(Field):
 class SelectField(Field):
     def __set__(self, obj, value):
         element = Select(obj.find_element(*self.locator))
-        if isinstance(value, str):
-            element.select_by_visible_text(value)
-        else:
+        try:
             element.select_by_value(str(value))
+        except NoSuchElementException:
+            element.select_by_visible_text(value)
 
     @property
     def text(self):
