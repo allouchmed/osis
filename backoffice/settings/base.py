@@ -69,6 +69,7 @@ INSTALLED_APPS = (
     'localflavor',
     'ckeditor',
     'osis_common',
+    'osis_role.apps.AutodiscoverRoleConfig',
     'reference',
     'rules_management',
     'base',
@@ -474,3 +475,8 @@ YEAR_LIMIT_EDG_MODIFICATION = int(os.environ.get("YEAR_LIMIT_EDG_MODIFICATION", 
 STAFF_FUNDING_URL = os.environ.get('STAFF_FUNDING_URL', '')
 VIRTUAL_DESKTOP_URL = os.environ.get('VIRTUAL_DESKTOP_URL', '')
 LEARNING_UNIT_PORTAL_URL = os.environ.get('LEARNING_UNIT_PORTAL_URL', 'https://uclouvain.be/cours-{year}-{acronym}')
+
+AUTHENTICATION_BACKENDS = [
+    'osis_role.contrib.permissions.ObjectPermissionBackend',
+    #'django.contrib.auth.backends.ModelBackend'
+]
