@@ -35,6 +35,7 @@ OPTIONAL_APPS = (
     'cms',
     'webservices',
     'behave_django',
+    'osis_role.apps.AutodiscoverRoleConfig',
     'backoffice'
 )
 OPTIONAL_MIDDLEWARES = ()
@@ -54,3 +55,7 @@ APPS_TO_TEST += OPTIONAL_APPS
 MIDDLEWARE += OPTIONAL_MIDDLEWARES
 INTERNAL_IPS += OPTIONAL_INTERNAL_IPS
 SITE_ID = 1
+
+AUTHENTICATION_BACKENDS = [
+    'osis_role.contrib.permissions.ObjectPermissionBackend',
+]

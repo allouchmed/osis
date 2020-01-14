@@ -24,7 +24,9 @@
 #
 ##############################################################################
 import rules
+from django.contrib.auth import get_user_model
 from django.contrib.auth.backends import ModelBackend
+from django.contrib.auth.models import Permission
 
 from osis_role import role
 
@@ -41,7 +43,14 @@ class ObjectPermissionBackend(ModelBackend):
                 rule_set = role_mdl.rule_set()
                 _add_role_queryset_to_perms_context(rule_set, perm, qs)
                 results.add(rule_set.test_rule(perm, user_obj, *args, **kwargs))
-        return any(results)  # //Fallback to previous model or super().has_perm(user_obj, perm, obj=kwargs.get('obj'))
+        return any(results) or super().has_perm(user_obj, perm, obj=kwargs.get('obj'))
+
+    def _get_group_permissions(self, user_obj, obj=None):
+        user_groups_field = get_user_model()._meta.get_field('groups')
+        user_groups_query = 'group__%s' % user_groups_field.related_query_name()
+        return Permission.objects.filter(**{user_groups_query: user_obj}).exclude(
+            group__name__in=role.role_manager.group_names_managed()
+        )
 
 
 def _get_roles_assigned(user_obj):

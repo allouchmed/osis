@@ -26,6 +26,7 @@
 import mock
 import rules
 from django.contrib.auth import models
+from django.contrib.auth.models import Group, Permission
 from django.db.models import QuerySet
 from django.test import TestCase
 from rules import RuleSet
@@ -75,6 +76,16 @@ class TestObjectPermissionBackend(TestCase):
         role_mdl._add_user_to_group()
 
         self.assertFalse(self.auth_class.has_perm(self.person.user, 'perm_denied'))
+
+    @mock.patch('django.db.models.QuerySet.exists', return_value=False)
+    def test_ensure_that_group_not_managed_by_role_manager_fallback_to_default_behaviour(self, mock_queryset_exists):
+        group = Group.objects.create(name='group_not_managed_by_role')
+        can_add_user = Permission.objects.get(codename='add_user')
+        group.permissions.add(can_add_user)
+        self.person.user.groups.add(group)
+
+        perm = "%s.%s" % (can_add_user.content_type.app_label, can_add_user.codename)
+        self.assertTrue(self.auth_class.has_perm(self.person.user, perm))
 
 
 class TestAddRoleQuerysetToRuleSet(TestCase):

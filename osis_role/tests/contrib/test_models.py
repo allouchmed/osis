@@ -91,3 +91,11 @@ class TestRoleModel(TestCase):
         instance = ConcreteRoleModel(person=self.person)
         instance._remove_user_from_group(self.person)
         self.assertIn(ConcreteRoleModel.group_name, self.person.user.groups.all().values_list('name', flat=True))
+
+    @mock.patch('django.db.models.QuerySet.exists', return_value=True)
+    def test_belong_to_case_person_belong_to_model(self, mock_queryset_exists):
+        self.assertTrue(ConcreteRoleModel().belong_to(self.person))
+
+    @mock.patch('django.db.models.QuerySet.exists', return_value=False)
+    def test_belong_to_case_person_not_belong_to_model(self, mock_queryset_exists):
+        self.assertFalse(ConcreteRoleModel().belong_to(self.person))

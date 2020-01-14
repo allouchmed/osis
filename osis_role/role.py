@@ -36,5 +36,8 @@ class OsisRoleManager:
             raise ImproperlyConfigured("role must be a subclass of RoleModel")
         self.roles.add(role)
 
+    def group_names_managed(self):
+        return {role.group_name for role in self.roles}
+
 
 role_manager = OsisRoleManager()

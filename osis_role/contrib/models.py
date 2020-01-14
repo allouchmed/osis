@@ -73,6 +73,10 @@ class RoleModel(models.Model, metaclass=RoleModelMeta):
         self._remove_user_from_group(person)
 
     @classmethod
+    def belong_to(cls, person):
+        return cls.objects.filter(person=person).exists()
+
+    @classmethod
     def rule_set(cls):
         return rules.RuleSet({})
 
