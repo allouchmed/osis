@@ -27,16 +27,15 @@ from django import forms
 from django.utils.translation import gettext_lazy as _
 
 from base.business.learning_units.edition import edit_learning_unit_end_date
-from base.forms.utils.choice_field import BLANK_CHOICE_DISPLAY
 from base.models import academic_year
 from base.models.academic_year import AcademicYear, compute_max_academic_year_adjournment
 
 
 # TODO Convert it in ModelForm
 class LearningUnitEndDateForm(forms.Form):
-    academic_year = forms.ModelChoiceField(required=True,
+    academic_year = forms.ModelChoiceField(required=False,
                                            queryset=AcademicYear.objects.none(),
-                                           empty_label=BLANK_CHOICE_DISPLAY,
+                                           empty_label=_("no planned end").capitalize(),
                                            label=_('Last year of organization')
                                            )
 
