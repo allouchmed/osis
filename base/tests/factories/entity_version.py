@@ -37,7 +37,7 @@ class EntityVersionFactory(factory.DjangoModelFactory):
 
     entity = factory.SubFactory(EntityFactory)
     title = factory.Faker('company')
-    acronym = factory.Faker('company_suffix')
+    acronym = factory.Faker('text', max_nb_chars=10)
     entity_type = factory.Iterator(entity_type.ENTITY_TYPES, getter=lambda c: c[0])
     parent = factory.SubFactory(EntityFactory)
     start_date = datetime.date(2015, 1, 1).isoformat()
