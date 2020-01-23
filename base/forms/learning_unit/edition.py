@@ -77,7 +77,7 @@ class LearningUnitEndDateForm(forms.Form):
         if min_year > max_year:
             raise ValueError('Learning_unit {} cannot be modify'.format(self.learning_unit))
 
-        return AcademicYear.objects.min_max_years(min_year, max_year.year)
+        return AcademicYear.objects.min_max_years(min_year, max_year)
 
     def save(self, update_learning_unit_year=True):
         return edit_learning_unit_end_date(self.learning_unit, self.cleaned_data['academic_year'],
