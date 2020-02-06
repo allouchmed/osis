@@ -29,6 +29,8 @@ from rest_framework import generics
 
 from base.business.education_groups import general_information_sections
 from base.models.education_group_year import EducationGroupYear
+from cms.models.translated_text import TranslatedText
+from cms.models.translated_text_label import TranslatedTextLabel
 from webservices.api.serializers.general_information import GeneralInformationSerializer
 
 
@@ -53,6 +55,36 @@ class GeneralInformation(generics.RetrieveAPIView):
             academic_year__year=self.kwargs['year'],
             education_group_type__name__in=general_information_sections.SECTIONS_PER_OFFER_TYPE.keys()
         )
+        pertinent_sections = general_information_sections.SECTIONS_PER_OFFER_TYPE[egy.education_group_type.name]
+        test = EducationGroupYear.objects.filter(id=egy.id)
+        translated_text_labels_common = TranslatedTextLabel.objects.filter(
+            text_label__label__in=pertinent_sections['common'],
+            language=self.kwargs['language'],
+        )
+        translated_text_labels = TranslatedTextLabel.objects.filter(
+            text_label__label__in=pertinent_sections['specific'],
+            language=self.kwargs['language'],
+        )
+        common_egy = EducationGroupYear.objects.get_common(
+            academic_year=egy.academic_year
+        )
+        common_translated_texts = TranslatedText.objects.filter(
+            reference_=common_egy.id,
+            text_label__label__in=translated_text_labels_common,
+            language=self.kwargs['language']
+        )
+        translated_texts = TranslatedText.objects.filter(
+            reference_=egy.id,
+            text_label__label__in=translated_text_labels,
+            language=self.kwargs['language']
+        )
+        for ctt in common_translated_texts:
+            annotation = {'common-' + ctt.text_label.label.text_label.label: ctt.text}
+            test = test.annotate(**annotation)
+        for ctt in translated_texts:
+            annotation = {ctt.text_label.label.text_label.label: ctt.text}
+            test = test.annotate(**annotation)
+            print(vars(test.first()))
         return egy
 
     def get_serializer_context(self):
