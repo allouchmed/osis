@@ -24,6 +24,7 @@
 #
 ##############################################################################
 from django.conf import settings
+from django.db.models import Value, CharField
 from django.test import TestCase
 
 from base.models.admission_condition import AdmissionCondition
@@ -177,11 +178,11 @@ class EvaluationSectionSerializerTestCase(TestCase):
         cls.academic_year = AcademicYearFactory(current=True)
         cls.common_egy = EducationGroupYearCommonFactory(academic_year=cls.academic_year)
         cls.language = settings.LANGUAGE_CODE_EN
-        TranslatedTextLabelFactory(
+        cls.t_label = TranslatedTextLabelFactory(
             language=cls.language,
             text_label__label=EVALUATION_KEY
         )
-        TranslatedTextFactory(
+        cls.t_common = TranslatedTextFactory(
             reference=cls.common_egy.id,
             entity=OFFER_YEAR,
             language=cls.language,
@@ -194,17 +195,14 @@ class EvaluationSectionSerializerTestCase(TestCase):
             education_group_type__name=TrainingType.PGRM_MASTER_120.name,
             academic_year=self.academic_year
         )
-        TranslatedTextFactory(
+        t = TranslatedTextFactory(
             reference=egy.id,
             entity=OFFER_YEAR,
             language=self.language,
             text_label__label=EVALUATION_KEY,
             text=EVALUATION_KEY.upper() + "_TEXT"
         )
-
-        serializer = EvaluationSectionSerializer(
-            {'id': EVALUATION_KEY}, context={'egy': egy, 'lang': self.language}
-        ).data
+        serializer = self._get_serializer(egy, t)
         self.assertEqual(serializer['content'], 'EVALUATION_TEXT_COMMON')
         self.assertEqual(serializer['free_text'], 'EVALUATION_TEXT')
 
@@ -214,14 +212,23 @@ class EvaluationSectionSerializerTestCase(TestCase):
             academic_year=self.academic_year,
             acronym='TEST1FC'
         )
-        TranslatedTextFactory(
+        t = TranslatedTextFactory(
             reference=egy.id,
             text_label__label=EVALUATION_KEY,
             language=self.language,
             text='EVALUATION_TEXT_FC'
         )
-        serializer = EvaluationSectionSerializer(
-            {'id': EVALUATION_KEY}, context={'egy': egy, 'lang': self.language}
-        ).data
+        serializer = self._get_serializer(egy, t)
         self.assertIsNone(serializer['content'])
         self.assertEqual(serializer['free_text'], 'EVALUATION_TEXT_FC')
+
+    def _get_serializer(self, egy, t):
+        annotated_egy = EducationGroupYear.objects.filter(id=egy.id).annotate(
+            evaluation=Value(t.text, output_field=CharField()),
+            common_evaluation=Value(self.t_common.text, output_field=CharField()),
+            evaluation_label=Value(self.t_label.label, output_field=CharField()),
+        ).first()
+        serializer = EvaluationSectionSerializer(
+            annotated_egy, context={'egy': annotated_egy, 'lang': self.language}
+        ).data
+        return serializer

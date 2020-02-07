@@ -29,15 +29,12 @@ from rest_framework import serializers
 from base.models.admission_condition import AdmissionCondition
 from base.models.education_group_year import EducationGroupYear
 from base.models.enums.education_group_types import TrainingType
-from cms.models.translated_text import TranslatedText
-from cms.models.translated_text_label import TranslatedTextLabel
 from webservices.api.serializers.achievement import AchievementsSerializer
 from webservices.api.serializers.admission_condition import AdmissionConditionsSerializer, \
     BachelorAdmissionConditionsSerializer, SpecializedMasterAdmissionConditionsSerializer, \
     AggregationAdmissionConditionsSerializer, MasterAdmissionConditionsSerializer, \
     ContinuingEducationTrainingAdmissionConditionsSerializer
 from webservices.api.serializers.contacts import ContactsSerializer
-from webservices.business import EVALUATION_KEY
 
 
 class SectionSerializer(serializers.Serializer):
@@ -111,34 +108,20 @@ class ContactsSectionSerializer(serializers.Serializer):
         return ContactsSerializer(egy, context=self.context).data
 
 
-class EvaluationSectionSerializer(serializers.Serializer):
-    id = serializers.CharField(read_only=True)
+class EvaluationSectionSerializer(serializers.ModelSerializer):
+    id = serializers.CharField(source='evaluation_label', read_only=True)
     content = serializers.SerializerMethodField()
-    free_text = serializers.SerializerMethodField()
-    label = serializers.SerializerMethodField()
+    free_text = serializers.CharField(source='evaluation', read_only=True)
+    label = serializers.CharField(source='evaluation_label', read_only=True)
 
-    def get_label(self, obj):
-        return TranslatedTextLabel.objects.get(
-            text_label__label=EVALUATION_KEY,
-            language=self.context.get('lang')
-        ).label
+    class Meta:
+        model = EducationGroupYear
+        fields = (
+            'id',
+            'content',
+            'free_text',
+            'label'
+        )
 
     def get_content(self, obj):
-        egy = self.context.get('egy')
-        if egy.is_continuing_education_education_group_year:
-            return None
-        common_egy = EducationGroupYear.objects.get_common(
-            academic_year=egy.academic_year
-        )
-        return TranslatedText.objects.get(
-            reference=common_egy.id,
-            text_label__label=EVALUATION_KEY,
-            language=self.context.get('lang')
-        ).text
-
-    def get_free_text(self, obj):
-        return TranslatedText.objects.get(
-            reference=self.context.get('egy').id,
-            text_label__label=EVALUATION_KEY,
-            language=self.context.get('lang')
-        ).text
+        return None if obj.is_continuing_education_education_group_year else obj.common_evaluation
