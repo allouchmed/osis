@@ -190,7 +190,7 @@ class IntroOffersSectionTestCase(TestCase):
         )
         intro_offer_section, expected_text = self._get_pertinent_intro_section(gey, self.egy)
         self.assertEqual(intro_offer_section['content'], expected_text)
-        self.assertEqual(intro_offer_section['id'], 'intro-testtc')
+        self.assertEqual(intro_offer_section['id'], 'intro-' + gey.child_branch.partial_acronym)
 
     def test_get_intro_option_offer(self):
         gey = GroupElementYearFactory(
@@ -205,7 +205,7 @@ class IntroOffersSectionTestCase(TestCase):
         intro_offer_section, expected_text = self._get_pertinent_intro_section(gey_option, self.egy)
 
         self.assertEqual(intro_offer_section['content'], expected_text)
-        self.assertEqual(intro_offer_section['id'], 'intro-testoption')
+        self.assertEqual(intro_offer_section['id'], 'intro-' + gey_option.child_branch.partial_acronym)
 
     def test_get_intro_finality_offer(self):
         g = GroupElementYearFactory(
@@ -219,7 +219,7 @@ class IntroOffersSectionTestCase(TestCase):
         )
         intro_offer_section, expected_text = self._get_pertinent_intro_section(gey, self.egy)
         self.assertEqual(intro_offer_section['content'], expected_text)
-        self.assertEqual(intro_offer_section['id'], 'intro-testfina')
+        self.assertEqual(intro_offer_section['id'], 'intro-' + gey.child_branch.partial_acronym)
 
     def _get_pertinent_intro_section(self, gey, egy):
         TranslatedTextLabelFactory(
@@ -232,9 +232,13 @@ class IntroOffersSectionTestCase(TestCase):
             entity=OFFER_YEAR,
             reference=gey.child_branch.id
         )
+        annotated_egy = EducationGroupYear.objects.filter(id=egy.id).annotate(**{
+            'intro-' + gey.child_branch.partial_acronym: Value(expected_text.text, output_field=CharField())
+        })
         return GeneralInformationSerializer(
-            egy, context={
+            annotated_egy.first(), context={
                 'language': self.language,
-                'acronym': egy.acronym
+                'acronym': egy.acronym,
+                'intro_offers': [gey.child_branch.partial_acronym]
             }
         ).data['sections'][0], expected_text.text

@@ -33,12 +33,9 @@ from base.business.education_groups import general_information_sections
 from base.business.education_groups.general_information_sections import \
     SKILLS_AND_ACHIEVEMENTS, ADMISSION_CONDITION, CONTACTS, CONTACT_INTRO, INTRODUCTION
 from base.models.education_group_year import EducationGroupYear
-from base.models.enums.education_group_types import GroupType
-from base.models.group_element_year import GroupElementYear
 from cms.enums.entity_name import OFFER_YEAR
 from cms.models.translated_text import TranslatedText
 from cms.models.translated_text_label import TranslatedTextLabel
-from program_management.business.group_element_years import group_element_year_tree
 from webservices.api.serializers.section import SectionSerializer, AchievementSectionSerializer, \
     AdmissionConditionSectionSerializer, ContactsSectionSerializer, EvaluationSectionSerializer
 from webservices.business import EVALUATION_KEY
@@ -88,7 +85,6 @@ class GeneralInformationSerializer(serializers.ModelSerializer):
             CONTACTS: ContactsSectionSerializer,
             EVALUATION_KEY: EvaluationSectionSerializer
         }
-        extra_intro_offers = self._get_intro_offers(obj)
         if EVALUATION_KEY in pertinent_sections['common']:
             pertinent_sections['common'].remove(EVALUATION_KEY)
 
@@ -110,8 +106,13 @@ class GeneralInformationSerializer(serializers.ModelSerializer):
             elif specific_section not in WS_SECTIONS_TO_SKIP:
                 sections.append(self._get_section_cms(obj, specific_section, language))
 
-        for offer in extra_intro_offers:
-            sections.append(self._get_section_cms(offer, 'intro', language))
+        if self.context.get('intro_offers'):
+            for intro_fields in self.context['intro_offers']:
+                sections.append({
+                    'label': 'intro-' + intro_fields,
+                    'translated_label': intro_fields,
+                    'text': getattr(obj, 'intro-' + intro_fields),
+                })
 
         datas += SectionSerializer(sections, many=True).data
         return datas
@@ -149,15 +150,3 @@ class GeneralInformationSerializer(serializers.ModelSerializer):
         elif 'common' in egy.acronym and section != EVALUATION_KEY:
             return section + '-commun'
         return section
-
-    @staticmethod
-    def _get_intro_offers(obj):
-        hierarchy = group_element_year_tree.EducationGroupHierarchy(root=obj)
-        extra_intro_offers = hierarchy.get_finality_list() + hierarchy.get_option_list()
-        common_core = GroupElementYear.objects.select_related('child_branch').filter(
-            parent=obj,
-            child_branch__education_group_type__name=GroupType.COMMON_CORE.name
-        ).first()
-        if common_core:
-            extra_intro_offers.append(common_core.child_branch)
-        return extra_intro_offers
