@@ -82,9 +82,6 @@ class GeneralInformationSerializer(serializers.ModelSerializer):
         language = settings.LANGUAGE_CODE_FR \
             if self.instance.language == settings.LANGUAGE_CODE_FR[:2] else self.instance.language
         pertinent_sections = general_information_sections.SECTIONS_PER_OFFER_TYPE[obj.education_group_type.name]
-        common_egy = EducationGroupYear.objects.get_common(
-            academic_year=obj.academic_year
-        )
         cms_serializers = {
             SKILLS_AND_ACHIEVEMENTS: AchievementSectionSerializer,
             ADMISSION_CONDITION: AdmissionConditionSectionSerializer,
@@ -92,17 +89,28 @@ class GeneralInformationSerializer(serializers.ModelSerializer):
             EVALUATION_KEY: EvaluationSectionSerializer
         }
         extra_intro_offers = self._get_intro_offers(obj)
-
         if EVALUATION_KEY in pertinent_sections['common']:
             pertinent_sections['common'].remove(EVALUATION_KEY)
 
         for common_section in pertinent_sections['common']:
-            sections.append(self._get_section_cms(common_egy, common_section, language))
+            sections.append({
+                'label': common_section + '-commun',
+                'translated_label': getattr(obj, 'common_' + common_section + '_label'),
+                'text': getattr(obj, 'common_' + common_section),
+            })
 
         for specific_section in pertinent_sections['specific']:
             serializer = cms_serializers.get(specific_section)
             if serializer:
-                serializer = serializer({'id': specific_section}, context={'egy': obj, 'lang': language})
+                serializer = serializer(
+                    {
+                        'label': specific_section,
+                        'translated_label': getattr(obj, specific_section + '_label'),
+                        'free_text': getattr(obj, specific_section),
+                        'content': getattr(obj, 'common_' + specific_section)
+                    } if specific_section == EVALUATION_KEY else
+                    {'id': specific_section}, context={'egy': obj, 'lang': language}
+                )
                 datas.append(serializer.data)
             elif specific_section not in WS_SECTIONS_TO_SKIP:
                 sections.append(self._get_section_cms(obj, specific_section, language))

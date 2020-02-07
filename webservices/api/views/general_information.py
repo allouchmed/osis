@@ -23,7 +23,7 @@
 #    see http://www.gnu.org/licenses/.
 #
 ##############################################################################
-from django.db.models import Q
+from django.db.models import Q, Value, CharField, OuterRef, Subquery
 from django.shortcuts import get_object_or_404
 from rest_framework import generics
 
@@ -56,36 +56,41 @@ class GeneralInformation(generics.RetrieveAPIView):
             education_group_type__name__in=general_information_sections.SECTIONS_PER_OFFER_TYPE.keys()
         )
         pertinent_sections = general_information_sections.SECTIONS_PER_OFFER_TYPE[egy.education_group_type.name]
-        test = EducationGroupYear.objects.filter(id=egy.id)
-        translated_text_labels_common = TranslatedTextLabel.objects.filter(
-            text_label__label__in=pertinent_sections['common'],
-            language=self.kwargs['language'],
-        )
-        translated_text_labels = TranslatedTextLabel.objects.filter(
-            text_label__label__in=pertinent_sections['specific'],
-            language=self.kwargs['language'],
-        )
+        egy_queryset = EducationGroupYear.objects.filter(id=egy.id)
         common_egy = EducationGroupYear.objects.get_common(
             academic_year=egy.academic_year
         )
+        translated_text_labels = TranslatedTextLabel.objects.filter(
+            text_label__label=OuterRef('text_label__label'),
+            language=self.kwargs['language'],
+        ).order_by('label').values('label')[:1]
         common_translated_texts = TranslatedText.objects.filter(
-            reference_=common_egy.id,
-            text_label__label__in=translated_text_labels_common,
+            reference=common_egy.id,
+            text_label__label__in=pertinent_sections['common'],
             language=self.kwargs['language']
         )
         translated_texts = TranslatedText.objects.filter(
-            reference_=egy.id,
-            text_label__label__in=translated_text_labels,
+            reference=egy.id,
+            text_label__label__in=pertinent_sections['specific'],
             language=self.kwargs['language']
         )
+        translated_texts = translated_texts.annotate(
+            translated_label=Subquery(translated_text_labels, output_field=CharField())
+        )
+        common_translated_texts = common_translated_texts.annotate(
+            translated_label=Subquery(translated_text_labels, output_field=CharField())
+        )
         for ctt in common_translated_texts:
-            annotation = {'common-' + ctt.text_label.label.text_label.label: ctt.text}
-            test = test.annotate(**annotation)
+            egy_queryset = egy_queryset.annotate(**{
+                'common_' + ctt.text_label.label: Value(ctt.text, output_field=CharField()) or None,
+                'common_' + ctt.text_label.label + '_label': Value(ctt.translated_label, output_field=CharField())
+            })
         for ctt in translated_texts:
-            annotation = {ctt.text_label.label.text_label.label: ctt.text}
-            test = test.annotate(**annotation)
-            print(vars(test.first()))
-        return egy
+            egy_queryset = egy_queryset.annotate(**{
+                ctt.text_label.label: Value(ctt.text, output_field=CharField()) or None,
+                ctt.text_label.label + '_label': Value(ctt.translated_label, output_field=CharField())
+            })
+        return egy_queryset.first()
 
     def get_serializer_context(self):
         serializer_context = super().get_serializer_context()

@@ -33,6 +33,7 @@ from cms.enums import entity_name
 class TextLabelFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = "cms.TextLabel"
+        django_get_or_create = ('entity', 'label')
 
     parent = None
     entity = factory.Iterator(entity_name.ENTITY_NAME, getter=operator.itemgetter(0))

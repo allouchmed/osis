@@ -37,7 +37,7 @@ class TranslatedTextFactory(factory.django.DjangoModelFactory):
     text_label = factory.SubFactory(TextLabelFactory)
     entity = factory.fuzzy.FuzzyText(prefix="Entity ", length=15)
     reference = factory.fuzzy.FuzzyInteger(1, 10)
-    text = None
+    text = factory.fuzzy.FuzzyText(prefix="Text_", length=30)
 
 
 class TranslatedTextRandomFactory(TranslatedTextFactory):

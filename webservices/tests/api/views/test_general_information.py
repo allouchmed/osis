@@ -26,19 +26,21 @@
 from unittest import mock
 
 from django.conf import settings
+from django.db.models import Value, CharField
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
 from base.business.education_groups.general_information_sections import DETAILED_PROGRAM, \
     SKILLS_AND_ACHIEVEMENTS, COMMON_DIDACTIC_PURPOSES
+from base.models.education_group_year import EducationGroupYear
 from base.tests.factories.education_group_year import EducationGroupYearFactory, EducationGroupYearCommonFactory
 from base.tests.factories.person import PersonFactory
 from cms.enums.entity_name import OFFER_YEAR
 from cms.tests.factories.translated_text import TranslatedTextFactory
 from cms.tests.factories.translated_text_label import TranslatedTextLabelFactory
 from webservices.api.serializers.general_information import GeneralInformationSerializer
-from webservices.business import EVALUATION_KEY, SKILLS_AND_ACHIEVEMENTS_INTRO, SKILLS_AND_ACHIEVEMENTS_EXTRA
+from webservices.business import SKILLS_AND_ACHIEVEMENTS_INTRO, SKILLS_AND_ACHIEVEMENTS_EXTRA
 
 
 class GeneralInformationTestCase(APITestCase):
@@ -49,26 +51,28 @@ class GeneralInformationTestCase(APITestCase):
         cls.egy = EducationGroupYearFactory()
         common_egy = EducationGroupYearCommonFactory(academic_year=cls.egy.academic_year)
         cls.pertinent_sections = {
-            'specific': [EVALUATION_KEY, DETAILED_PROGRAM, SKILLS_AND_ACHIEVEMENTS],
-            'common': [COMMON_DIDACTIC_PURPOSES, EVALUATION_KEY]
+            'specific': [DETAILED_PROGRAM, SKILLS_AND_ACHIEVEMENTS],
+            'common': [COMMON_DIDACTIC_PURPOSES]
         }
+        cls.annotations = {}
         for section in cls.pertinent_sections['common']:
-            TranslatedTextLabelFactory(language=cls.language, text_label__label=section)
-            TranslatedTextFactory(
+            t_label = TranslatedTextLabelFactory(language=cls.language, text_label__label=section)
+            t = TranslatedTextFactory(
                 reference=common_egy.id,
                 entity=OFFER_YEAR,
                 language=cls.language,
                 text_label__label=section
             )
+            cls.annotations.update({'common_' + section: (t_label.label, t.text)})
         for section in cls.pertinent_sections['specific']:
-            if section != EVALUATION_KEY:
-                TranslatedTextLabelFactory(language=cls.language, text_label__label=section)
-            TranslatedTextFactory(
+            t_label = TranslatedTextLabelFactory(language=cls.language, text_label__label=section)
+            t = TranslatedTextFactory(
                 reference=cls.egy.id,
                 entity=OFFER_YEAR,
                 language=cls.language,
                 text_label__label=section
             )
+            cls.annotations.update({section: (t_label.label, t.text)})
         for label in [SKILLS_AND_ACHIEVEMENTS_INTRO, SKILLS_AND_ACHIEVEMENTS_EXTRA]:
             TranslatedTextFactory(
                 text_label__label=label,
@@ -90,6 +94,13 @@ class GeneralInformationTestCase(APITestCase):
         sections_patcher.start()
         self.addCleanup(sections_patcher.stop)
         self.client.force_authenticate(user=self.person.user)
+        self.annotated_egy = EducationGroupYear.objects.filter(id=self.egy.id)
+        for label, (translated_label, text) in self.annotations.items():
+            self.annotated_egy = self.annotated_egy.annotate(**{
+                label + '_label': Value(translated_label, output_field=CharField()),
+                label: Value(text, output_field=CharField()) or None
+            })
+        self.annotated_egy = self.annotated_egy.first()
 
     def test_get_not_authorized(self):
         self.client.force_authenticate(user=None)
@@ -118,7 +129,7 @@ class GeneralInformationTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         serializer = GeneralInformationSerializer(
-            self.egy, context={
+            self.annotated_egy, context={
                 'language': self.language,
                 'acronym': self.egy.acronym
             }
@@ -136,7 +147,7 @@ class GeneralInformationTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         serializer = GeneralInformationSerializer(
-            self.egy, context={
+            self.annotated_egy, context={
                 'language': self.language,
                 'acronym': self.egy.partial_acronym
             }
