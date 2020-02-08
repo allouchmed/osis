@@ -98,27 +98,27 @@ class GeneralInformation(generics.RetrieveAPIView):
             })
         # TODO: To improve?
         self.extra_intro_offers += self._get_intro_offers(egy)
-        intro_texts = TranslatedText.objects.filter(
-            reference__in=[egy_item.id for egy_item in self.extra_intro_offers],
-            text_label__label=INTRODUCTION,
-            language=self.kwargs['language']
-        ).annotate(
-            partial_acronym=Subquery(EducationGroupYear.objects.filter(
-                    id=Subquery(EducationGroupYear.objects.filter(id=OuterRef(OuterRef('reference'))).values('id')[:1])
-            ).values('partial_acronym')[:1]),
-            translated_label=Subquery(TranslatedTextLabel.objects.filter(
+        if self.extra_intro_offers:
+            intro_texts = TranslatedText.objects.filter(
+                reference__in=[egy_item.id for egy_item in self.extra_intro_offers],
                 text_label__label=INTRODUCTION,
                 language=self.kwargs['language']
-            ).values('label')[:1])
-        )
-        if intro_texts:
+            ).annotate(
+                partial_acronym=Subquery(EducationGroupYear.objects.filter(
+                        id=Subquery(EducationGroupYear.objects.filter(id=OuterRef(OuterRef('reference'))).values('id')[:1])
+                ).values('partial_acronym')[:1]),
+                translated_label=Subquery(TranslatedTextLabel.objects.filter(
+                    text_label__label=INTRODUCTION,
+                    language=self.kwargs['language']
+                ).values('label')[:1])
+            )
             egy_queryset = egy_queryset.annotate(
                 intro=Value(TranslatedTextLabel.objects.get(text_label__label=INTRODUCTION), output_field=CharField()),
             )
-        for intro_text in intro_texts:
-            egy_queryset = egy_queryset.annotate(**{
-                'intro-' + intro_text.partial_acronym: Value(intro_text.text, output_field=CharField()),
-            })
+            for intro_text in intro_texts:
+                egy_queryset = egy_queryset.annotate(**{
+                    'intro-' + intro_text.partial_acronym: Value(intro_text.text, output_field=CharField()),
+                })
 
         return egy_queryset.first()
 
