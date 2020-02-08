@@ -191,7 +191,7 @@ class IntroOffersSectionTestCase(APITestCase):
         self.assertEqual(response.data, intro_offer_section)
 
     def _get_pertinent_intro_section(self, gey):
-        TranslatedTextLabelFactory(
+        t_label = TranslatedTextLabelFactory(
             text_label__label=INTRODUCTION,
             language=self.language,
         )
@@ -202,7 +202,8 @@ class IntroOffersSectionTestCase(APITestCase):
             reference=gey.child_branch.id
         )
         annotated_egy = EducationGroupYear.objects.filter(id=self.egy.id).annotate(**{
-            'intro-' + gey.child_branch.partial_acronym: Value(expected_text.text, output_field=CharField())
+            'intro-' + gey.child_branch.partial_acronym: Value(expected_text.text, output_field=CharField()),
+            'intro': Value(t_label.label, output_field=CharField())
         })
         return GeneralInformationSerializer(
             annotated_egy.first(), context={

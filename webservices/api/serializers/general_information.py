@@ -108,7 +108,7 @@ class GeneralInformationSerializer(serializers.ModelSerializer):
             for intro_partial_acronym in self.context['intro_offers']:
                 sections.append({
                     'label': 'intro-' + intro_partial_acronym,
-                    'translated_label': intro_partial_acronym,
+                    'translated_label': getattr(obj, 'intro'),
                     'text': getattr(obj, 'intro-' + intro_partial_acronym, None),
                 })
 
