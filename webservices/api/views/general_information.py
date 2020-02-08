@@ -54,7 +54,7 @@ class GeneralInformation(generics.RetrieveAPIView):
             'education_group_type'
         ).prefetch_related(
             'educationgrouppublicationcontact_set',
-            'educationgroupachievement_set'
+            'educationgroupachievement_set',
         ).filter(
             Q(acronym__iexact=self.kwargs['acronym']) | Q(partial_acronym__iexact=self.kwargs['acronym']),
             academic_year__year=self.kwargs['year'],
@@ -68,7 +68,7 @@ class GeneralInformation(generics.RetrieveAPIView):
         common_egy = EducationGroupYear.objects.get_common(
             academic_year=egy.academic_year
         )
-        translated_text_labels = TranslatedTextLabel.objects.filter(
+        translated_text_labels_query = TranslatedTextLabel.objects.filter(
             text_label__label=OuterRef('text_label__label'),
             language=self.kwargs['language'],
         ).values('label')[:1]
@@ -77,7 +77,7 @@ class GeneralInformation(generics.RetrieveAPIView):
             text_label__label__in=list(set(pertinent_sections['specific']).union(set(pertinent_sections['common']))),
             language=self.kwargs['language']
         ).annotate(
-            translated_label=Subquery(translated_text_labels, output_field=CharField())
+            translated_label=Subquery(translated_text_labels_query, output_field=CharField())
         )
         for label in pertinent_sections['specific'] + ['common_' + section for section in pertinent_sections['common']]:
             egy_queryset = egy_queryset.annotate(**{
@@ -105,7 +105,7 @@ class GeneralInformation(generics.RetrieveAPIView):
                 language=self.kwargs['language']
             ).annotate(
                 partial_acronym=Subquery(EducationGroupYear.objects.filter(
-                        id=Subquery(EducationGroupYear.objects.filter(id=OuterRef(OuterRef('reference'))).values('id')[:1])
+                    id=Subquery(EducationGroupYear.objects.filter(id=OuterRef(OuterRef('reference'))).values('id')[:1])
                 ).values('partial_acronym')[:1]),
                 translated_label=Subquery(TranslatedTextLabel.objects.filter(
                     text_label__label=INTRODUCTION,
@@ -133,10 +133,13 @@ class GeneralInformation(generics.RetrieveAPIView):
     def _get_intro_offers(obj):
         hierarchy = group_element_year_tree.EducationGroupHierarchy(root=obj)
         extra_intro_offers = hierarchy.get_finality_list() + hierarchy.get_option_list()
-        common_core = GroupElementYear.objects.select_related('child_branch').filter(
-            parent=obj,
-            child_branch__education_group_type__name=GroupType.COMMON_CORE.name
-        ).first()
-        if common_core:
-            extra_intro_offers.append(common_core.child_branch)
+        common_core = EducationGroupYear.objects.filter(
+            id__in=GroupElementYear.objects.select_related(
+                'child_branch'
+            ).filter(
+                parent=obj,
+                child_branch__education_group_type__name=GroupType.COMMON_CORE.name
+            ).values('child_branch_id')[:1]
+        )
+        extra_intro_offers += common_core
         return extra_intro_offers
