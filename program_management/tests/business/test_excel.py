@@ -117,7 +117,7 @@ class TestGeneratePrerequisitesWorkbook(TestCase):
             [_("Official"), None, None, None, None, None, None]
         ]
 
-        headers = [row_to_value(row) for row in self.sheet_prerequisites.iter_rows(range_string="A1:G2")]
+        headers = [row_to_value(row) for row in self.sheet_prerequisites.iter_rows("A1:G2")]
         self.assertListEqual(headers, expected_headers)
 
     def test_when_learning_unit_year_has_one_prerequisite(self):
