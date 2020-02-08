@@ -61,8 +61,7 @@ class GeneralInformation(generics.RetrieveAPIView):
 
         pertinent_sections = general_information_sections.SECTIONS_PER_OFFER_TYPE[egy.education_group_type.name]
         egy_queryset = EducationGroupYear.objects.filter(id=egy.id)
-        extra_intro_offers = self._get_intro_offers(egy)
-        self.intro_partial_acronyms = [egy.partial_acronym for egy in extra_intro_offers]
+        self.extra_intro_offers = self._get_intro_offers(egy)
         common_egy = EducationGroupYear.objects.get_common(
             academic_year=egy.academic_year
         )
@@ -104,13 +103,13 @@ class GeneralInformation(generics.RetrieveAPIView):
             })
 
         intro_texts = TranslatedText.objects.filter(
-            reference__in=[egy_item.id for egy_item in extra_intro_offers],
+            reference__in=[egy_item.id for egy_item in self.extra_intro_offers],
             text_label__label='intro',
             language=self.kwargs['language']
         ).annotate(
             partial_acronym=Subquery(
                 EducationGroupYear.objects.filter(
-                    id__in=[egy.id for egy in extra_intro_offers if egy.id == OuterRef('reference')]
+                    id__in=[egy.id for egy in self.extra_intro_offers if egy.id == OuterRef('reference')]
                 ).values('partial_acronym')[:1]
             )
         )
@@ -126,7 +125,7 @@ class GeneralInformation(generics.RetrieveAPIView):
         serializer_context = super().get_serializer_context()
         serializer_context['language'] = self.kwargs['language']
         serializer_context['acronym'] = self.kwargs['acronym']
-        serializer_context['intro_offers'] = self.intro_partial_acronyms
+        serializer_context['intro_offers'] = [egy.partial_acronym for egy in self.extra_intro_offers]
         return serializer_context
 
     @staticmethod
