@@ -69,32 +69,38 @@ class GeneralInformation(generics.RetrieveAPIView):
         translated_text_labels = TranslatedTextLabel.objects.filter(
             text_label__label=OuterRef('text_label__label'),
             language=self.kwargs['language'],
-        ).order_by('label').values('label')[:1]
-        common_translated_texts = TranslatedText.objects.filter(
-            reference=common_egy.id,
-            text_label__label__in=pertinent_sections['common'],
-            language=self.kwargs['language']
-        )
+        ).values('label')[:1]
         translated_texts = TranslatedText.objects.filter(
-            reference=egy.id,
-            text_label__label__in=pertinent_sections['specific'],
+            reference__in=[egy.id, common_egy.id],
+            text_label__label__in=list(set(pertinent_sections['specific']).union(set(pertinent_sections['common']))),
             language=self.kwargs['language']
-        )
-        translated_texts = translated_texts.annotate(
+        ).annotate(
             translated_label=Subquery(translated_text_labels, output_field=CharField())
         )
-        common_translated_texts = common_translated_texts.annotate(
-            translated_label=Subquery(translated_text_labels, output_field=CharField())
-        )
-        for ctt in common_translated_texts:
+        for label in pertinent_sections['common']:
             egy_queryset = egy_queryset.annotate(**{
-                'common_' + ctt.text_label.label: Value(ctt.text, output_field=CharField()) or None,
-                'common_' + ctt.text_label.label + '_label': Value(ctt.translated_label, output_field=CharField())
+                'common_' + label: Subquery(
+                    translated_texts.filter(text_label__label=label, reference=common_egy.id).values('text')[:1],
+                    output_field=CharField()
+                ),
+                'common_' + label + '_label': Subquery(
+                    translated_texts.filter(
+                        text_label__label=label,
+                        reference=common_egy.id
+                    ).values('translated_label')[:1],
+                    output_field=CharField()
+                )
             })
-        for ctt in translated_texts:
+        for label in pertinent_sections['specific']:
             egy_queryset = egy_queryset.annotate(**{
-                ctt.text_label.label: Value(ctt.text, output_field=CharField()) or None,
-                ctt.text_label.label + '_label': Value(ctt.translated_label, output_field=CharField())
+                label: Subquery(
+                    translated_texts.filter(text_label__label=label, reference=egy.id).values('text')[:1],
+                    output_field=CharField()
+                ),
+                label + '_label': Subquery(
+                    translated_texts.filter(text_label__label=label, reference=egy.id).values('translated_label')[:1],
+                    output_field=CharField()
+                )
             })
 
         intro_texts = TranslatedText.objects.filter(
