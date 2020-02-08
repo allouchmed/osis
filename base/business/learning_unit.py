@@ -43,8 +43,7 @@ from cms.enums import entity_name
 
 CMS_LABEL_SPECIFICATIONS = ['themes_discussed', 'prerequisite']
 
-# ???
-CMS_LABEL_PEDAGOGY_FR_AND_EN = ['teaching_methods', 'evaluation_methods', 'other_informations',
+CMS_LABEL_PEDAGOGY_FR_AND_EN = ['resume', 'teaching_methods', 'evaluation_methods', 'other_informations',
                                 'online_resources']
 CMS_LABEL_PEDAGOGY_FR_ONLY = ['bibliography', 'mobility']
 CMS_LABEL_PEDAGOGY = CMS_LABEL_PEDAGOGY_FR_AND_EN + CMS_LABEL_PEDAGOGY_FR_ONLY

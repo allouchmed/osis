@@ -304,7 +304,7 @@ class LearningUnitYearDeletion(TestCase):
                               text_label=cms_specification_label, text='Specification of learning unit year')
         # Create CMS data - TAB Pedagogy
         cms_pedagogy_label = TextLabelFactory(entity=entity_name.LEARNING_UNIT_YEAR,
-                                              label=CMS_LABEL_PEDAGOGY[0])
+                                              label=CMS_LABEL_PEDAGOGY[1])
         TranslatedTextFactory(entity=entity_name.LEARNING_UNIT_YEAR, reference=learning_unit_year_to_delete.pk,
                               text_label=cms_pedagogy_label, text='Pedagogy of learning unit year')
         # Create CMS data - TAB Summary
