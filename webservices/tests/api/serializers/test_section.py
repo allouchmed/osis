@@ -33,7 +33,8 @@ from base.models.enums.education_group_types import TrainingType
 from base.tests.factories.academic_year import AcademicYearFactory
 from base.tests.factories.admission_condition import AdmissionConditionFactory
 from base.tests.factories.education_group_publication_contact import EducationGroupPublicationContactFactory
-from base.tests.factories.education_group_year import EducationGroupYearFactory, EducationGroupYearCommonMasterFactory, \
+from base.tests.factories.education_group_year import EducationGroupYearFactory, \
+    EducationGroupYearCommonMasterFactory, \
     TrainingFactory, EducationGroupYearCommonFactory
 from cms.enums.entity_name import OFFER_YEAR
 from cms.tests.factories.translated_text import TranslatedTextFactory
@@ -189,20 +190,20 @@ class EvaluationSectionSerializerTestCase(TestCase):
             text_label__label=EVALUATION_KEY,
             text="EVALUATION_TEXT_COMMON"
         )
+        cls.egy = TrainingFactory(
+            education_group_type__name=TrainingType.PGRM_MASTER_120.name,
+            academic_year=cls.academic_year
+        )
 
     def test_get_both_evaluation_texts(self):
-        egy = TrainingFactory(
-            education_group_type__name=TrainingType.PGRM_MASTER_120.name,
-            academic_year=self.academic_year
-        )
         t = TranslatedTextFactory(
-            reference=egy.id,
+            reference=self.egy.id,
             entity=OFFER_YEAR,
             language=self.language,
             text_label__label=EVALUATION_KEY,
             text=EVALUATION_KEY.upper() + "_TEXT"
         )
-        serializer = self._get_serializer(egy, t)
+        serializer = self._get_serializer(self.egy, t)
         self.assertEqual(serializer['content'], 'EVALUATION_TEXT_COMMON')
         self.assertEqual(serializer['free_text'], 'EVALUATION_TEXT')
 
@@ -222,9 +223,13 @@ class EvaluationSectionSerializerTestCase(TestCase):
         self.assertIsNone(serializer['content'])
         self.assertEqual(serializer['free_text'], 'EVALUATION_TEXT_FC')
 
-    def _get_serializer(self, egy, t):
+    def test_get_none_if_free_text_does_not_exist(self):
+        serializer = self._get_serializer(self.egy)
+        self.assertIsNone(serializer['free_text'], 'Should get None and not raise and Error')
+
+    def _get_serializer(self, egy, t=None):
         annotated_egy = EducationGroupYear.objects.filter(id=egy.id).annotate(
-            evaluation=Value(t.text, output_field=CharField()),
+            evaluation=Value(t.text if t else None, output_field=CharField()),
             common_evaluation=Value(self.t_common.text, output_field=CharField()),
             evaluation_label=Value(self.t_label.label, output_field=CharField()),
         ).first()

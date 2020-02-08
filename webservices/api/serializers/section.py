@@ -23,7 +23,6 @@
 #    see http://www.gnu.org/licenses/.
 #
 ##############################################################################
-
 from rest_framework import serializers
 
 from base.models.admission_condition import AdmissionCondition
