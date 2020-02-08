@@ -303,6 +303,8 @@ class LearningUnitYearDeletion(TestCase):
         TranslatedTextFactory(entity=entity_name.LEARNING_UNIT_YEAR, reference=learning_unit_year_to_delete.pk,
                               text_label=cms_specification_label, text='Specification of learning unit year')
         # Create CMS data - TAB Pedagogy
+        ## Use second element of CMS_LABEL_PEDAGOGY : TextLabel with label resume will be created with 
+        ## CMS_LABEL SUMMARY
         cms_pedagogy_label = TextLabelFactory(entity=entity_name.LEARNING_UNIT_YEAR,
                                               label=CMS_LABEL_PEDAGOGY[1])
         TranslatedTextFactory(entity=entity_name.LEARNING_UNIT_YEAR, reference=learning_unit_year_to_delete.pk,
