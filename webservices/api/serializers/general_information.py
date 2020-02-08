@@ -25,17 +25,12 @@
 ##############################################################################
 
 from django.conf import settings
-from django.core.exceptions import ObjectDoesNotExist
-from django.db.models import Value, CharField
 from rest_framework import serializers
 
 from base.business.education_groups import general_information_sections
 from base.business.education_groups.general_information_sections import \
-    SKILLS_AND_ACHIEVEMENTS, ADMISSION_CONDITION, CONTACTS, CONTACT_INTRO, INTRODUCTION
+    SKILLS_AND_ACHIEVEMENTS, ADMISSION_CONDITION, CONTACTS, CONTACT_INTRO
 from base.models.education_group_year import EducationGroupYear
-from cms.enums.entity_name import OFFER_YEAR
-from cms.models.translated_text import TranslatedText
-from cms.models.translated_text_label import TranslatedTextLabel
 from webservices.api.serializers.section import SectionSerializer, AchievementSectionSerializer, \
     AdmissionConditionSectionSerializer, ContactsSectionSerializer, EvaluationSectionSerializer
 from webservices.business import EVALUATION_KEY
@@ -92,7 +87,7 @@ class GeneralInformationSerializer(serializers.ModelSerializer):
             sections.append({
                 'label': common_section + '' if '-commun' in common_section else '-commun',
                 'translated_label': getattr(obj, 'common_' + common_section + '_label'),
-                'text': getattr(obj, 'common_' + common_section),
+                'text': getattr(obj, 'common_' + common_section, None),
             })
 
         for specific_section in pertinent_sections['specific']:
@@ -104,47 +99,18 @@ class GeneralInformationSerializer(serializers.ModelSerializer):
                 )
                 datas.append(serializer.data)
             elif specific_section not in WS_SECTIONS_TO_SKIP:
-                sections.append(self._get_section_cms(obj, specific_section, language))
-
+                sections.append({
+                    'label': specific_section,
+                    'translated_label': getattr(obj, specific_section + '_label'),
+                    'text': getattr(obj, specific_section, None),
+                })
         if self.context.get('intro_offers'):
             for intro_partial_acronym in self.context['intro_offers']:
                 sections.append({
                     'label': 'intro-' + intro_partial_acronym,
                     'translated_label': intro_partial_acronym,
-                    'text': getattr(obj, 'intro-' + intro_partial_acronym),
+                    'text': getattr(obj, 'intro-' + intro_partial_acronym, None),
                 })
 
         datas += SectionSerializer(sections, many=True).data
         return datas
-
-    def _get_section_cms(self, egy, section, language):
-        translated_text_label = TranslatedTextLabel.objects.get(
-            text_label__label=section,
-            language=language,
-        )
-        translated_text = TranslatedText.objects.filter(
-            text_label__label=section,
-            language=language,
-            entity=OFFER_YEAR,
-            reference=egy.id
-        ).annotate(
-            label=Value(
-                self._get_correct_label_name(egy, section),
-                output_field=CharField()
-            ),
-            translated_label=Value(translated_text_label.label, output_field=CharField())
-        )
-        try:
-            return translated_text.values('label', 'translated_label', 'text').get()
-        except ObjectDoesNotExist:
-            return {
-                'label': self._get_correct_label_name(egy, section),
-                'translated_label': translated_text_label.label,
-                'text': None,
-            }
-
-    @staticmethod
-    def _get_correct_label_name(egy, section):
-        if section == INTRODUCTION:
-            return 'intro-' + egy.partial_acronym.lower()
-        return section

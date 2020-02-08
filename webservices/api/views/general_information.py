@@ -61,7 +61,7 @@ class GeneralInformation(generics.RetrieveAPIView):
 
         pertinent_sections = general_information_sections.SECTIONS_PER_OFFER_TYPE[egy.education_group_type.name]
         egy_queryset = EducationGroupYear.objects.filter(id=egy.id)
-        self.extra_intro_offers = self._get_intro_offers(egy)
+
         common_egy = EducationGroupYear.objects.get_common(
             academic_year=egy.academic_year
         )
@@ -93,22 +93,25 @@ class GeneralInformation(generics.RetrieveAPIView):
                     output_field=CharField()
                 )
             })
-
+        # TODO: To improve?
+        self.extra_intro_offers = self._get_intro_offers(egy)
         intro_texts = TranslatedText.objects.filter(
             reference__in=[egy_item.id for egy_item in self.extra_intro_offers],
             text_label__label='intro',
             language=self.kwargs['language']
         ).annotate(
-            partial_acronym=Subquery(
-                EducationGroupYear.objects.filter(
-                    id__in=[egy.id for egy in self.extra_intro_offers if egy.id == OuterRef('reference')]
-                ).values('partial_acronym')[:1]
-            )
+            partial_acronym=Subquery(EducationGroupYear.objects.filter(
+                    id=Subquery(EducationGroupYear.objects.filter(id=OuterRef(OuterRef('reference'))).values('id')[:1])
+            ).values('partial_acronym')[:1]),
+            translated_label=Subquery(TranslatedTextLabel.objects.filter(
+                text_label__label='intro',
+                language=self.kwargs['language']
+            ).values('label')[:1])
         )
 
-        for itt in intro_texts:
+        for intro_text in intro_texts:
             egy_queryset = egy_queryset.annotate(**{
-                'intro-' + itt.partial_acronym: Value(itt.text, output_field=CharField()) or None,
+                'intro-' + intro_text.partial_acronym: Value(intro_text.text, output_field=CharField()),
             })
 
         return egy_queryset.first()

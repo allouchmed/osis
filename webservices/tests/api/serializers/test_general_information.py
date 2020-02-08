@@ -95,13 +95,13 @@ class GeneralInformationSerializerTestCase(TestCase):
         )
         patcher_sections.start()
         self.addCleanup(patcher_sections.stop)
-        self.annotated_egy = EducationGroupYear.objects.filter(id=self.egy.id)
+        self.annotated_egy_qs = EducationGroupYear.objects.filter(id=self.egy.id)
         for label, (translated_label, text) in self.annotations.items():
-            self.annotated_egy = self.annotated_egy.annotate(**{
+            self.annotated_egy_qs = self.annotated_egy_qs.annotate(**{
                 label + '_label': Value(translated_label, output_field=CharField()),
                 label: Value(text, output_field=CharField()) or None
             })
-        self.annotated_egy = self.annotated_egy.first()
+        self.annotated_egy = self.annotated_egy_qs.first()
         self.serializer = GeneralInformationSerializer(
             self.annotated_egy, context={
                 'language': self.language,
@@ -145,12 +145,15 @@ class GeneralInformationSerializerTestCase(TestCase):
                 'base.business.education_groups.general_information_sections.SECTIONS_PER_OFFER_TYPE',
                 _get_mocked_sections_per_offer_type(self.egy, specific=[WELCOME_INTRODUCTION])
         ):
-            TranslatedTextLabelFactory(
+            t_label = TranslatedTextLabelFactory(
                 language=self.language,
                 text_label__label=WELCOME_INTRODUCTION
             )
+            self.annotated_egy_qs = self.annotated_egy_qs.annotate(
+                welcome_introduction_label=Value(t_label.label, output_field=CharField())
+            )
             welcome_introduction_section = GeneralInformationSerializer(
-                self.egy, context={
+                self.annotated_egy_qs.first(), context={
                     'language': self.language,
                     'acronym': self.egy.acronym
                 }
