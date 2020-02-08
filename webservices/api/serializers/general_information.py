@@ -107,11 +107,11 @@ class GeneralInformationSerializer(serializers.ModelSerializer):
                 sections.append(self._get_section_cms(obj, specific_section, language))
 
         if self.context.get('intro_offers'):
-            for intro_fields in self.context['intro_offers']:
+            for intro_partial_acronym in self.context['intro_offers']:
                 sections.append({
-                    'label': 'intro-' + intro_fields,
-                    'translated_label': intro_fields,
-                    'text': getattr(obj, 'intro-' + intro_fields),
+                    'label': 'intro-' + intro_partial_acronym,
+                    'translated_label': intro_partial_acronym,
+                    'text': getattr(obj, 'intro-' + intro_partial_acronym),
                 })
 
         datas += SectionSerializer(sections, many=True).data
