@@ -24,7 +24,7 @@
 #
 ##############################################################################
 from django.db.models import Q, Value, CharField, OuterRef, Subquery
-from django.shortcuts import get_object_or_404
+from django.http import Http404
 from rest_framework import generics
 
 from base.business.education_groups import general_information_sections
@@ -45,24 +45,26 @@ class GeneralInformation(generics.RetrieveAPIView):
     name = 'generalinformations_read'
     serializer_class = GeneralInformationSerializer
 
+    extra_intro_offers = []
+
     def get_object(self):
-        egy = get_object_or_404(
-            EducationGroupYear.objects.select_related(
-                'academic_year',
-                'admissioncondition',
-                'education_group_type'
-            ).prefetch_related(
-                'educationgrouppublicationcontact_set',
-                'educationgroupachievement_set'
-            ),
+        egy_queryset = EducationGroupYear.objects.select_related(
+            'academic_year',
+            'admissioncondition',
+            'education_group_type'
+        ).prefetch_related(
+            'educationgrouppublicationcontact_set',
+            'educationgroupachievement_set'
+        ).filter(
             Q(acronym__iexact=self.kwargs['acronym']) | Q(partial_acronym__iexact=self.kwargs['acronym']),
             academic_year__year=self.kwargs['year'],
             education_group_type__name__in=general_information_sections.SECTIONS_PER_OFFER_TYPE.keys()
         )
+        if not egy_queryset.exists():
+            raise Http404()
 
+        egy = egy_queryset.first()
         pertinent_sections = general_information_sections.SECTIONS_PER_OFFER_TYPE[egy.education_group_type.name]
-        egy_queryset = EducationGroupYear.objects.filter(id=egy.id)
-
         common_egy = EducationGroupYear.objects.get_common(
             academic_year=egy.academic_year
         )
@@ -95,7 +97,7 @@ class GeneralInformation(generics.RetrieveAPIView):
                 )
             })
         # TODO: To improve?
-        self.extra_intro_offers = self._get_intro_offers(egy)
+        self.extra_intro_offers += self._get_intro_offers(egy)
         intro_texts = TranslatedText.objects.filter(
             reference__in=[egy_item.id for egy_item in self.extra_intro_offers],
             text_label__label=INTRODUCTION,
