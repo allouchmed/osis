@@ -98,7 +98,7 @@ class GeneralInformationTestCase(APITestCase):
         for label, (translated_label, text) in self.annotations.items():
             self.annotated_egy = self.annotated_egy.annotate(**{
                 label + '_label': Value(translated_label, output_field=CharField()),
-                label: Value(text, output_field=CharField()) or None
+                label: Value(text, output_field=CharField())
             })
         self.annotated_egy = self.annotated_egy.first()
 

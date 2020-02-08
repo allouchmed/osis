@@ -90,7 +90,7 @@ class GeneralInformationSerializer(serializers.ModelSerializer):
 
         for common_section in pertinent_sections['common']:
             sections.append({
-                'label': common_section + '-commun',
+                'label': common_section + '' if '-commun' in common_section else '-commun',
                 'translated_label': getattr(obj, 'common_' + common_section + '_label'),
                 'text': getattr(obj, 'common_' + common_section),
             })
@@ -147,6 +147,4 @@ class GeneralInformationSerializer(serializers.ModelSerializer):
     def _get_correct_label_name(egy, section):
         if section == INTRODUCTION:
             return 'intro-' + egy.partial_acronym.lower()
-        elif 'common' in egy.acronym and section != EVALUATION_KEY:
-            return section + '-commun'
         return section

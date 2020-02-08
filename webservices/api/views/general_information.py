@@ -76,28 +76,20 @@ class GeneralInformation(generics.RetrieveAPIView):
         ).annotate(
             translated_label=Subquery(translated_text_labels, output_field=CharField())
         )
-        for label in pertinent_sections['common']:
-            egy_queryset = egy_queryset.annotate(**{
-                'common_' + label: Subquery(
-                    translated_texts.filter(text_label__label=label, reference=common_egy.id).values('text')[:1],
-                    output_field=CharField()
-                ),
-                'common_' + label + '_label': Subquery(
-                    translated_texts.filter(
-                        text_label__label=label,
-                        reference=common_egy.id
-                    ).values('translated_label')[:1],
-                    output_field=CharField()
-                )
-            })
-        for label in pertinent_sections['specific']:
+        for label in pertinent_sections['specific'] + ['common_' + section for section in pertinent_sections['common']]:
             egy_queryset = egy_queryset.annotate(**{
                 label: Subquery(
-                    translated_texts.filter(text_label__label=label, reference=egy.id).values('text')[:1],
+                    translated_texts.filter(
+                        text_label__label=label[7:] if 'common_' in label else label,
+                        reference=common_egy.id if 'common_' in label else egy.id
+                    ).values('text')[:1],
                     output_field=CharField()
                 ),
                 label + '_label': Subquery(
-                    translated_texts.filter(text_label__label=label, reference=egy.id).values('translated_label')[:1],
+                    translated_texts.filter(
+                        text_label__label=label[7:] if 'common_' in label else label,
+                        reference=common_egy.id if 'common_' in label else egy.id
+                    ).values('translated_label')[:1],
                     output_field=CharField()
                 )
             })
