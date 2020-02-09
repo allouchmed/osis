@@ -85,24 +85,27 @@ class GeneralInformation(generics.RetrieveAPIView):
         for label in pertinent_sections['specific'] + ['common_' + section for section in pertinent_sections['common']]:
             egy_queryset = egy_queryset.annotate(**{
                 label: Subquery(
-                    translated_texts_query.filter(
-                        text_label__label=label[7:] if 'common_' in label else label,
-                        reference=common_egy.id if 'common_' in label else egy.id
+                    self._get_appropriate_translated_text(
+                        common_egy, egy, label, translated_texts_query
                     ).values('text')[:1],
                     output_field=CharField()
                 ),
                 label + '_label': Subquery(
-                    translated_texts_query.filter(
-                        text_label__label=label[7:] if 'common_' in label else label,
-                        reference=common_egy.id if 'common_' in label else egy.id
+                    self._get_appropriate_translated_text(
+                        common_egy, egy, label, translated_texts_query
                     ).values('translated_label')[:1],
                     output_field=CharField()
                 )
             })
         # TODO: To improve?
-        egy_queryset = self._get_intro_offers(egy, self.kwargs['language'], egy_queryset)
-
+        egy_queryset = _get_intro_offers(egy, self.kwargs['language'], egy_queryset)
         return egy_queryset.first()
+
+    def _get_appropriate_translated_text(self, common_egy, egy, label, translated_texts_query):
+        return translated_texts_query.filter(
+            text_label__label=label[7:] if 'common_' in label else label,
+            reference=common_egy.id if 'common_' in label else egy.id
+        )
 
     def get_serializer_context(self):
         serializer_context = super().get_serializer_context()
@@ -111,43 +114,43 @@ class GeneralInformation(generics.RetrieveAPIView):
         serializer_context['intro_offers'] = [egy.partial_acronym for egy in self.extra_intro_offers]
         return serializer_context
 
-    @staticmethod
-    def _get_intro_offers(obj, language, qs):
-        hierarchy = group_element_year_tree.EducationGroupHierarchy(root=obj)
-        extra_intro_offers = hierarchy.get_finality_list() + hierarchy.get_option_list()
-        common_core = EducationGroupYear.objects.filter(
-            id__in=GroupElementYear.objects.select_related(
-                'child_branch'
-            ).filter(
-                parent=obj,
-                child_branch__education_group_type__name=GroupType.COMMON_CORE.name
-            ).values('child_branch_id')[:1]
-        )
-        extra_intro_offers += common_core
-        if extra_intro_offers:
-            intro_texts = TranslatedText.objects.filter(
-                reference__in=[egy_item.id for egy_item in extra_intro_offers],
+
+def _get_intro_offers(obj, language, qs):
+    hierarchy = group_element_year_tree.EducationGroupHierarchy(root=obj)
+    extra_intro_offers = hierarchy.get_finality_list() + hierarchy.get_option_list()
+    common_core = EducationGroupYear.objects.filter(
+        id__in=GroupElementYear.objects.select_related(
+            'child_branch'
+        ).filter(
+            parent=obj,
+            child_branch__education_group_type__name=GroupType.COMMON_CORE.name
+        ).values('child_branch_id')[:1]
+    )
+    extra_intro_offers += common_core
+    if extra_intro_offers:
+        intro_texts = TranslatedText.objects.filter(
+            reference__in=[egy_item.id for egy_item in extra_intro_offers],
+            text_label__label=INTRODUCTION,
+            language=language,
+            entity=OFFER_YEAR
+        ).annotate(
+            partial_acronym=Subquery(EducationGroupYear.objects.filter(
+                id=Subquery(EducationGroupYear.objects.filter(id=OuterRef(OuterRef('reference'))).values('id')[:1])
+            ).values('partial_acronym')[:1]),
+            translated_label=Subquery(TranslatedTextLabel.objects.filter(
                 text_label__label=INTRODUCTION,
-                language=language,
-                entity=OFFER_YEAR
-            ).annotate(
-                partial_acronym=Subquery(EducationGroupYear.objects.filter(
-                    id=Subquery(EducationGroupYear.objects.filter(id=OuterRef(OuterRef('reference'))).values('id')[:1])
-                ).values('partial_acronym')[:1]),
-                translated_label=Subquery(TranslatedTextLabel.objects.filter(
-                    text_label__label=INTRODUCTION,
-                    language=language
-                ).values('label')[:1])
-            )
-            qs = qs.annotate(
-                intro=Value(get_object_or_none(
-                    TranslatedTextLabel,
-                    text_label__label=INTRODUCTION,
-                    language=language
-                ), output_field=CharField()),
-            )
-            qs = qs.annotate(**{
-                'intro-' + intro_text.partial_acronym.lower(): Value(intro_text.text, output_field=CharField())
-                for intro_text in intro_texts
-            })
-        return qs
+                language=language
+            ).values('label')[:1])
+        )
+        qs = qs.annotate(
+            intro=Value(get_object_or_none(
+                TranslatedTextLabel,
+                text_label__label=INTRODUCTION,
+                language=language
+            ), output_field=CharField()),
+        )
+        qs = qs.annotate(**{
+            'intro-' + intro_text.partial_acronym.lower(): Value(intro_text.text, output_field=CharField())
+            for intro_text in intro_texts
+        })
+    return qs
