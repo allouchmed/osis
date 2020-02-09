@@ -89,10 +89,8 @@ class GeneralInformationSerializer(serializers.ModelSerializer):
         for specific_section in pertinent_sections['specific']:
             serializer = cms_serializers.get(specific_section)
             if serializer:
-                serializer = serializer(
-                    obj if specific_section == EVALUATION_KEY else {'id': specific_section},
-                    context={'egy': obj, 'lang': language}
-                )
+                serializer = serializer(obj) if specific_section == EVALUATION_KEY \
+                    else serializer({'id': specific_section}, context={'egy': obj, 'lang': language})
                 datas.append(serializer.data)
             elif specific_section not in WS_SECTIONS_TO_SKIP:
                 sections.append(self._get_section_item(specific_section, obj))
