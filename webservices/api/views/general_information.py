@@ -23,6 +23,7 @@
 #    see http://www.gnu.org/licenses/.
 #
 ##############################################################################
+from django.conf import settings
 from django.db.models import Q, Value, CharField, OuterRef, Subquery
 from django.http import Http404
 from rest_framework import generics
@@ -64,20 +65,21 @@ class GeneralInformation(generics.RetrieveAPIView):
         )
         if not egy_queryset.exists():
             raise Http404()
-
         egy = egy_queryset.first()
+        language = settings.LANGUAGE_CODE_FR \
+            if self.kwargs['language'] == settings.LANGUAGE_CODE_FR[:2] else self.kwargs['language']
         pertinent_sections = general_information_sections.SECTIONS_PER_OFFER_TYPE[egy.education_group_type.name]
         common_egy = EducationGroupYear.objects.get_common(
             academic_year=egy.academic_year
         )
         translated_text_labels_query = TranslatedTextLabel.objects.filter(
             text_label__label=OuterRef('text_label__label'),
-            language=self.kwargs['language'],
+            language=language,
         ).values('label')[:1]
         translated_texts_query = TranslatedText.objects.filter(
             reference__in=[egy.id, common_egy.id],
             text_label__label__in=list(set(pertinent_sections['specific']).union(set(pertinent_sections['common']))),
-            language=self.kwargs['language'],
+            language=language,
             entity=OFFER_YEAR
         ).annotate(
             translated_label=Subquery(translated_text_labels_query, output_field=CharField())
@@ -98,7 +100,7 @@ class GeneralInformation(generics.RetrieveAPIView):
                 )
             })
         # TODO: To improve?
-        egy_queryset = _get_intro_offers(egy, self.kwargs['language'], egy_queryset)
+        egy_queryset = _get_intro_offers(egy, language, egy_queryset)
         return egy_queryset.first()
 
     def _get_appropriate_translated_text(self, common_egy, egy, label, translated_texts_query):
