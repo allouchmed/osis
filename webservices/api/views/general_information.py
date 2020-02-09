@@ -97,28 +97,7 @@ class GeneralInformation(generics.RetrieveAPIView):
                 )
             })
         # TODO: To improve?
-        self.extra_intro_offers += self._get_intro_offers(egy)
-        if self.extra_intro_offers:
-            intro_texts = TranslatedText.objects.filter(
-                reference__in=[egy_item.id for egy_item in self.extra_intro_offers],
-                text_label__label=INTRODUCTION,
-                language=self.kwargs['language']
-            ).annotate(
-                partial_acronym=Subquery(EducationGroupYear.objects.filter(
-                    id=Subquery(EducationGroupYear.objects.filter(id=OuterRef(OuterRef('reference'))).values('id')[:1])
-                ).values('partial_acronym')[:1]),
-                translated_label=Subquery(TranslatedTextLabel.objects.filter(
-                    text_label__label=INTRODUCTION,
-                    language=self.kwargs['language']
-                ).values('label')[:1])
-            )
-            egy_queryset = egy_queryset.annotate(
-                intro=Value(TranslatedTextLabel.objects.get(text_label__label=INTRODUCTION), output_field=CharField()),
-            )
-            egy_queryset = egy_queryset.annotate(**{
-                'intro-' + intro_text.partial_acronym.lower(): Value(intro_text.text, output_field=CharField())
-                for intro_text in intro_texts
-            })
+        egy_queryset = self._get_intro_offers(egy, self.kwargs['language'], egy_queryset)
 
         return egy_queryset.first()
 
@@ -130,7 +109,7 @@ class GeneralInformation(generics.RetrieveAPIView):
         return serializer_context
 
     @staticmethod
-    def _get_intro_offers(obj):
+    def _get_intro_offers(obj, language, qs):
         hierarchy = group_element_year_tree.EducationGroupHierarchy(root=obj)
         extra_intro_offers = hierarchy.get_finality_list() + hierarchy.get_option_list()
         common_core = EducationGroupYear.objects.filter(
@@ -142,4 +121,25 @@ class GeneralInformation(generics.RetrieveAPIView):
             ).values('child_branch_id')[:1]
         )
         extra_intro_offers += common_core
-        return extra_intro_offers
+        if extra_intro_offers:
+            intro_texts = TranslatedText.objects.filter(
+                reference__in=[egy_item.id for egy_item in extra_intro_offers],
+                text_label__label=INTRODUCTION,
+                language=language
+            ).annotate(
+                partial_acronym=Subquery(EducationGroupYear.objects.filter(
+                    id=Subquery(EducationGroupYear.objects.filter(id=OuterRef(OuterRef('reference'))).values('id')[:1])
+                ).values('partial_acronym')[:1]),
+                translated_label=Subquery(TranslatedTextLabel.objects.filter(
+                    text_label__label=INTRODUCTION,
+                    language=language
+                ).values('label')[:1])
+            )
+            qs = qs.annotate(
+                intro=Value(TranslatedTextLabel.objects.get(text_label__label=INTRODUCTION), output_field=CharField()),
+            )
+            qs = qs.annotate(**{
+                'intro-' + intro_text.partial_acronym.lower(): Value(intro_text.text, output_field=CharField())
+                for intro_text in intro_texts
+            })
+        return qs
