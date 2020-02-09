@@ -203,7 +203,7 @@ class EvaluationSectionSerializerTestCase(TestCase):
             text_label__label=EVALUATION_KEY,
             text=EVALUATION_KEY.upper() + "_TEXT"
         )
-        serializer = self._get_serializer(self.egy, t)
+        serializer = self._get_serializer(cms=t)
         self.assertEqual(serializer['content'], 'EVALUATION_TEXT_COMMON')
         self.assertEqual(serializer['free_text'], 'EVALUATION_TEXT')
 
@@ -224,12 +224,12 @@ class EvaluationSectionSerializerTestCase(TestCase):
         self.assertEqual(serializer['free_text'], 'EVALUATION_TEXT_FC')
 
     def test_get_none_if_free_text_does_not_exist(self):
-        serializer = self._get_serializer(self.egy)
+        serializer = self._get_serializer()
         self.assertIsNone(serializer['free_text'], 'Should get None and not raise and Error')
 
-    def _get_serializer(self, egy, t=None):
-        annotated_egys = EducationGroupYear.objects.filter(id=egy.id).annotate(
-            evaluation=Value(t.text if t else None, output_field=CharField()),
+    def _get_serializer(self, egy=None, cms=None):
+        annotated_egys = EducationGroupYear.objects.filter(id=egy.id if egy else self.egy.id).annotate(
+            evaluation=Value(cms.text if cms else None, output_field=CharField()),
             common_evaluation=Value(self.t_common.text, output_field=CharField()),
             evaluation_label=Value(self.t_label.label, output_field=CharField()),
         )
