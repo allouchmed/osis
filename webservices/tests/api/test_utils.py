@@ -26,6 +26,10 @@
 from django.db.models import Value, CharField
 
 from base.models.education_group_year import EducationGroupYear
+from cms.enums.entity_name import OFFER_YEAR
+from cms.tests.factories.translated_text import TranslatedTextFactory
+from cms.tests.factories.translated_text_label import TranslatedTextLabelFactory
+from webservices.business import SKILLS_AND_ACHIEVEMENTS_INTRO, SKILLS_AND_ACHIEVEMENTS_EXTRA
 
 
 def get_annotated_egy_qs(egy, annotations):
@@ -36,3 +40,23 @@ def get_annotated_egy_qs(egy, annotations):
             label: Value(text or None, output_field=CharField())
         })
     return annotated_egy_qs
+
+
+def create_cms_texts(language, egy, annotations, pertinent_sections):
+    for section in pertinent_sections:
+        t_label = TranslatedTextLabelFactory(language=language, text_label__label=section)
+        t = TranslatedTextFactory(
+            reference=egy.id,
+            entity=OFFER_YEAR,
+            language=language,
+            text_label__label=section
+        )
+        annotations.update({section: (t_label.label, t.text)})
+    for label in [SKILLS_AND_ACHIEVEMENTS_INTRO, SKILLS_AND_ACHIEVEMENTS_EXTRA]:
+        TranslatedTextFactory(
+            text_label__label=label,
+            reference=egy.id,
+            entity=OFFER_YEAR,
+            language=language
+        )
+    return annotations

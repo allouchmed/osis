@@ -43,9 +43,8 @@ from cms.enums.entity_name import OFFER_YEAR
 from cms.tests.factories.translated_text import TranslatedTextFactory
 from cms.tests.factories.translated_text_label import TranslatedTextLabelFactory
 from webservices.api.serializers.general_information import GeneralInformationSerializer
-from webservices.business import SKILLS_AND_ACHIEVEMENTS_INTRO, SKILLS_AND_ACHIEVEMENTS_EXTRA
 from webservices.tests.api.serializers.test_general_information import _get_mocked_sections_per_offer_type
-from webservices.tests.api.test_utils import get_annotated_egy_qs
+from webservices.tests.api.test_utils import get_annotated_egy_qs, create_cms_texts
 
 
 class GeneralInformationTestCase(APITestCase):
@@ -69,22 +68,9 @@ class GeneralInformationTestCase(APITestCase):
                 text_label__label=section
             )
             cls.annotations.update({'common_' + section: (t_label.label, t.text)})
-        for section in cls.pertinent_sections['specific']:
-            t_label = TranslatedTextLabelFactory(language=cls.language, text_label__label=section)
-            t = TranslatedTextFactory(
-                reference=cls.egy.id,
-                entity=OFFER_YEAR,
-                language=cls.language,
-                text_label__label=section
-            )
-            cls.annotations.update({section: (t_label.label, t.text)})
-        for label in [SKILLS_AND_ACHIEVEMENTS_INTRO, SKILLS_AND_ACHIEVEMENTS_EXTRA]:
-            TranslatedTextFactory(
-                text_label__label=label,
-                reference=cls.egy.id,
-                entity=OFFER_YEAR,
-                language=cls.language
-            )
+        cls.annotations.update(
+            **create_cms_texts(cls.language, cls.egy, cls.annotations, cls.pertinent_sections['specific'])
+        )
         cls.url = reverse('generalinformations_read', kwargs={
             'acronym': cls.egy.acronym,
             'year': cls.egy.academic_year.year,
