@@ -60,7 +60,8 @@ class GeneralInformation(generics.RetrieveAPIView):
             'educationgroupachievement_set',
         ).filter(
             Q(acronym__iexact=self.kwargs['acronym']) | Q(partial_acronym__iexact=self.kwargs['acronym']),
-            academic_year__year=self.kwargs['year']
+            academic_year__year=self.kwargs['year'],
+            education_group_type__name__in=general_information_sections.SECTIONS_PER_OFFER_TYPE.keys()
         )
         if not egy_queryset.exists():
             raise Http404()
@@ -138,8 +139,7 @@ class GeneralInformation(generics.RetrieveAPIView):
                 ).values('partial_acronym')[:1]),
                 translated_label=Subquery(TranslatedTextLabel.objects.filter(
                     text_label__label=INTRODUCTION,
-                    language=language,
-                    entity=OFFER_YEAR
+                    language=language
                 ).values('label')[:1])
             )
             qs = qs.annotate(
