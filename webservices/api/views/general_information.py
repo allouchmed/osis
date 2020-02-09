@@ -115,10 +115,10 @@ class GeneralInformation(generics.RetrieveAPIView):
             egy_queryset = egy_queryset.annotate(
                 intro=Value(TranslatedTextLabel.objects.get(text_label__label=INTRODUCTION), output_field=CharField()),
             )
-            for intro_text in intro_texts:
-                egy_queryset = egy_queryset.annotate(**{
-                    'intro-' + intro_text.partial_acronym: Value(intro_text.text, output_field=CharField()),
-                })
+            egy_queryset = egy_queryset.annotate(**{
+                'intro-' + intro_text.partial_acronym: Value(intro_text.text, output_field=CharField())
+                for intro_text in intro_texts
+            })
 
         return egy_queryset.first()
 

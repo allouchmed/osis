@@ -193,7 +193,7 @@ class IntroOffersSectionTestCase(TestCase):
         )
         intro_offer_section, expected_text = self._get_pertinent_intro_section(gey, self.egy)
         self.assertEqual(intro_offer_section['content'], expected_text)
-        self.assertEqual(intro_offer_section['id'], 'intro-' + gey.child_branch.partial_acronym)
+        self.assertEqual(intro_offer_section['id'], 'intro-' + gey.child_branch.partial_acronym.lower())
 
     def test_get_intro_option_offer(self):
         gey = GroupElementYearFactory(
@@ -208,7 +208,7 @@ class IntroOffersSectionTestCase(TestCase):
         intro_offer_section, expected_text = self._get_pertinent_intro_section(gey_option, self.egy)
 
         self.assertEqual(intro_offer_section['content'], expected_text)
-        self.assertEqual(intro_offer_section['id'], 'intro-' + gey_option.child_branch.partial_acronym)
+        self.assertEqual(intro_offer_section['id'], 'intro-' + gey_option.child_branch.partial_acronym.lower())
 
     def test_get_intro_finality_offer(self):
         g = GroupElementYearFactory(
@@ -222,7 +222,7 @@ class IntroOffersSectionTestCase(TestCase):
         )
         intro_offer_section, expected_text = self._get_pertinent_intro_section(gey, self.egy)
         self.assertEqual(intro_offer_section['content'], expected_text)
-        self.assertEqual(intro_offer_section['id'], 'intro-' + gey.child_branch.partial_acronym)
+        self.assertEqual(intro_offer_section['id'], 'intro-' + gey.child_branch.partial_acronym.lower())
 
     def _get_pertinent_intro_section(self, gey, egy):
         t_label = TranslatedTextLabelFactory(
@@ -236,7 +236,7 @@ class IntroOffersSectionTestCase(TestCase):
             reference=gey.child_branch.id
         )
         annotated_egy = EducationGroupYear.objects.filter(id=egy.id).annotate(**{
-            'intro-' + gey.child_branch.partial_acronym: Value(expected_text.text, output_field=CharField()),
+            'intro-' + gey.child_branch.partial_acronym.lower(): Value(expected_text.text, output_field=CharField()),
             'intro': Value(t_label.label, output_field=CharField())
         })
         return GeneralInformationSerializer(

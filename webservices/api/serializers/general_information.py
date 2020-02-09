@@ -84,11 +84,7 @@ class GeneralInformationSerializer(serializers.ModelSerializer):
             pertinent_sections['common'].remove(EVALUATION_KEY)
 
         for common_section in pertinent_sections['common']:
-            sections.append({
-                'label': common_section + '' if '-commun' in common_section else '-commun',
-                'translated_label': getattr(obj, 'common_' + common_section + '_label'),
-                'text': getattr(obj, 'common_' + common_section, None),
-            })
+            sections.append(self._get_section_item(common_section, obj, True))
 
         for specific_section in pertinent_sections['specific']:
             serializer = cms_serializers.get(specific_section)
@@ -99,18 +95,23 @@ class GeneralInformationSerializer(serializers.ModelSerializer):
                 )
                 datas.append(serializer.data)
             elif specific_section not in WS_SECTIONS_TO_SKIP:
-                sections.append({
-                    'label': specific_section,
-                    'translated_label': getattr(obj, specific_section + '_label'),
-                    'text': getattr(obj, specific_section, None),
-                })
+                sections.append(self._get_section_item(specific_section, obj))
         if self.context.get('intro_offers'):
-            for intro_partial_acronym in self.context['intro_offers']:
-                sections.append({
-                    'label': 'intro-' + intro_partial_acronym,
-                    'translated_label': getattr(obj, 'intro'),
-                    'text': getattr(obj, 'intro-' + intro_partial_acronym, None),
-                })
+            sections += [{
+                'label': 'intro-' + intro_partial_acronym.lower(),
+                'translated_label': getattr(obj, 'intro'),
+                'text': getattr(obj, 'intro-' + intro_partial_acronym.lower(), None)
+            } for intro_partial_acronym in self.context['intro_offers']]
 
         datas += SectionSerializer(sections, many=True).data
         return datas
+
+    def _get_section_item(self, section, obj, is_common=False):
+        return {
+            'label': section + '' if '-commun' in section else '-commun',
+            'translated_label': getattr(obj, self._get_text_prefix_annotation(is_common) + section + '_label'),
+            'text': getattr(obj, self._get_text_prefix_annotation(is_common) + section, None),
+        }
+
+    def _get_text_prefix_annotation(self, is_common=False):
+        return 'common_' if is_common else ''
