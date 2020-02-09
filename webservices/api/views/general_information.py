@@ -38,7 +38,6 @@ from cms.models.translated_text import TranslatedText
 from cms.models.translated_text_label import TranslatedTextLabel
 from program_management.business.group_element_years import group_element_year_tree
 from webservices.api.serializers.general_information import GeneralInformationSerializer
-from webservices.business import EVALUATION_KEY
 
 
 class GeneralInformation(generics.RetrieveAPIView):
@@ -68,8 +67,6 @@ class GeneralInformation(generics.RetrieveAPIView):
 
         egy = egy_queryset.first()
         pertinent_sections = general_information_sections.SECTIONS_PER_OFFER_TYPE[egy.education_group_type.name]
-        if EVALUATION_KEY in pertinent_sections['common']:
-            pertinent_sections['common'].remove(EVALUATION_KEY)
         common_egy = EducationGroupYear.objects.get_common(
             academic_year=egy.academic_year
         )

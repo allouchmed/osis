@@ -38,6 +38,7 @@ from cms.enums.entity_name import OFFER_YEAR
 from cms.tests.factories.translated_text import TranslatedTextFactory
 from cms.tests.factories.translated_text_label import TranslatedTextLabelFactory
 from webservices.api.serializers.general_information import GeneralInformationSerializer
+from webservices.business import EVALUATION_KEY
 from webservices.tests.api.test_utils import get_annotated_egy_qs, create_cms_texts
 
 
@@ -49,8 +50,8 @@ class GeneralInformationTestCase(APITestCase):
         cls.egy = EducationGroupYearFactory()
         common_egy = EducationGroupYearCommonFactory(academic_year=cls.egy.academic_year)
         cls.pertinent_sections = {
-            'specific': [DETAILED_PROGRAM, SKILLS_AND_ACHIEVEMENTS],
-            'common': [COMMON_DIDACTIC_PURPOSES]
+            'specific': [EVALUATION_KEY, DETAILED_PROGRAM, SKILLS_AND_ACHIEVEMENTS],
+            'common': [COMMON_DIDACTIC_PURPOSES, EVALUATION_KEY]
         }
         cls.annotations = {}
         for section in cls.pertinent_sections['common']:
