@@ -198,7 +198,7 @@ class IntroOffersSectionTestCase(APITestCase):
             reference=gey.child_branch.id
         )
         annotated_egy = EducationGroupYear.objects.filter(id=self.egy.id).annotate(**{
-            'intro-' + gey.child_branch.partial_acronym: Value(expected_text.text, output_field=CharField()),
+            'intro-' + gey.child_branch.partial_acronym.lower(): Value(expected_text.text, output_field=CharField()),
             'intro': Value(t_label.label, output_field=CharField())
         })
         return GeneralInformationSerializer(

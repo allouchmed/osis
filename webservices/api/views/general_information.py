@@ -72,7 +72,7 @@ class GeneralInformation(generics.RetrieveAPIView):
             text_label__label=OuterRef('text_label__label'),
             language=self.kwargs['language'],
         ).values('label')[:1]
-        translated_texts = TranslatedText.objects.filter(
+        translated_texts_query = TranslatedText.objects.filter(
             reference__in=[egy.id, common_egy.id],
             text_label__label__in=list(set(pertinent_sections['specific']).union(set(pertinent_sections['common']))),
             language=self.kwargs['language']
@@ -82,14 +82,14 @@ class GeneralInformation(generics.RetrieveAPIView):
         for label in pertinent_sections['specific'] + ['common_' + section for section in pertinent_sections['common']]:
             egy_queryset = egy_queryset.annotate(**{
                 label: Subquery(
-                    translated_texts.filter(
+                    translated_texts_query.filter(
                         text_label__label=label[7:] if 'common_' in label else label,
                         reference=common_egy.id if 'common_' in label else egy.id
                     ).values('text')[:1],
                     output_field=CharField()
                 ),
                 label + '_label': Subquery(
-                    translated_texts.filter(
+                    translated_texts_query.filter(
                         text_label__label=label[7:] if 'common_' in label else label,
                         reference=common_egy.id if 'common_' in label else egy.id
                     ).values('translated_label')[:1],
@@ -116,7 +116,7 @@ class GeneralInformation(generics.RetrieveAPIView):
                 intro=Value(TranslatedTextLabel.objects.get(text_label__label=INTRODUCTION), output_field=CharField()),
             )
             egy_queryset = egy_queryset.annotate(**{
-                'intro-' + intro_text.partial_acronym: Value(intro_text.text, output_field=CharField())
+                'intro-' + intro_text.partial_acronym.lower(): Value(intro_text.text, output_field=CharField())
                 for intro_text in intro_texts
             })
 
