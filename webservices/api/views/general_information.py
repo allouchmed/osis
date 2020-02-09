@@ -32,6 +32,7 @@ from base.business.education_groups.general_information_sections import INTRODUC
 from base.models.education_group_year import EducationGroupYear
 from base.models.enums.education_group_types import GroupType
 from base.models.group_element_year import GroupElementYear
+from base.models.utils.utils import get_object_or_none
 from cms.models.translated_text import TranslatedText
 from cms.models.translated_text_label import TranslatedTextLabel
 from program_management.business.group_element_years import group_element_year_tree
@@ -136,7 +137,8 @@ class GeneralInformation(generics.RetrieveAPIView):
                 ).values('label')[:1])
             )
             qs = qs.annotate(
-                intro=Value(TranslatedTextLabel.objects.get(
+                intro=Value(get_object_or_none(
+                    TranslatedTextLabel,
                     text_label__label=INTRODUCTION,
                     language=language
                 ), output_field=CharField()),
