@@ -60,8 +60,7 @@ class GeneralInformation(generics.RetrieveAPIView):
             'educationgroupachievement_set',
         ).filter(
             Q(acronym__iexact=self.kwargs['acronym']) | Q(partial_acronym__iexact=self.kwargs['acronym']),
-            academic_year__year=self.kwargs['year'],
-            education_group_type__name__in=general_information_sections.SECTIONS_PER_OFFER_TYPE.keys()
+            academic_year__year=self.kwargs['year']
         )
         if not egy_queryset.exists():
             raise Http404()
