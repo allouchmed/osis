@@ -212,7 +212,8 @@ class EvaluationSectionSerializerTestCase(TestCase):
             reference=egy.id,
             text_label__label=EVALUATION_KEY,
             language=self.language,
-            text='EVALUATION_TEXT_FC'
+            text='EVALUATION_TEXT_FC',
+            entity=OFFER_YEAR
         )
         serializer = self._get_serializer(egy, t)
         self.assertIsNone(serializer['content'])

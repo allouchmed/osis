@@ -33,10 +33,12 @@ from base.models.education_group_year import EducationGroupYear
 from base.models.enums.education_group_types import GroupType
 from base.models.group_element_year import GroupElementYear
 from base.models.utils.utils import get_object_or_none
+from cms.enums.entity_name import OFFER_YEAR
 from cms.models.translated_text import TranslatedText
 from cms.models.translated_text_label import TranslatedTextLabel
 from program_management.business.group_element_years import group_element_year_tree
 from webservices.api.serializers.general_information import GeneralInformationSerializer
+from webservices.business import EVALUATION_KEY
 
 
 class GeneralInformation(generics.RetrieveAPIView):
@@ -66,6 +68,8 @@ class GeneralInformation(generics.RetrieveAPIView):
 
         egy = egy_queryset.first()
         pertinent_sections = general_information_sections.SECTIONS_PER_OFFER_TYPE[egy.education_group_type.name]
+        if EVALUATION_KEY in pertinent_sections['common']:
+            pertinent_sections['common'].remove(EVALUATION_KEY)
         common_egy = EducationGroupYear.objects.get_common(
             academic_year=egy.academic_year
         )
@@ -76,7 +80,8 @@ class GeneralInformation(generics.RetrieveAPIView):
         translated_texts_query = TranslatedText.objects.filter(
             reference__in=[egy.id, common_egy.id],
             text_label__label__in=list(set(pertinent_sections['specific']).union(set(pertinent_sections['common']))),
-            language=self.kwargs['language']
+            language=self.kwargs['language'],
+            entity=OFFER_YEAR
         ).annotate(
             translated_label=Subquery(translated_text_labels_query, output_field=CharField())
         )
@@ -126,14 +131,16 @@ class GeneralInformation(generics.RetrieveAPIView):
             intro_texts = TranslatedText.objects.filter(
                 reference__in=[egy_item.id for egy_item in extra_intro_offers],
                 text_label__label=INTRODUCTION,
-                language=language
+                language=language,
+                entity=OFFER_YEAR
             ).annotate(
                 partial_acronym=Subquery(EducationGroupYear.objects.filter(
                     id=Subquery(EducationGroupYear.objects.filter(id=OuterRef(OuterRef('reference'))).values('id')[:1])
                 ).values('partial_acronym')[:1]),
                 translated_label=Subquery(TranslatedTextLabel.objects.filter(
                     text_label__label=INTRODUCTION,
-                    language=language
+                    language=language,
+                    entity=OFFER_YEAR
                 ).values('label')[:1])
             )
             qs = qs.annotate(
