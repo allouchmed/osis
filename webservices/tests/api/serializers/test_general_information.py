@@ -173,29 +173,32 @@ class IntroOffersSectionTestCase(TestCase):
         self.assertEqual(intro_offer_section['id'], 'intro-' + gey.child_branch.partial_acronym.lower())
 
     def test_get_intro_option_offer(self):
-        gey = GroupElementYearFactory(
-            parent=self.egy,
-            child_branch__education_group_type__name=GroupType.OPTION_LIST_CHOICE.name
-        )
-        gey_option = GroupElementYearFactory(
-            parent=gey.child_branch,
-            child_branch__education_group_type__name=MiniTrainingType.OPTION.name,
-            child_branch__partial_acronym="TESTOPTION"
+        gey_option = self._create_tree_for_intro_cms(
+            GroupType.OPTION_LIST_CHOICE.name,
+            MiniTrainingType.OPTION.name,
+            'TESTOPTION'
         )
         intro_offer_section, expected_text = self._get_pertinent_intro_section(gey_option, self.egy)
 
         self.assertEqual(intro_offer_section['content'], expected_text)
         self.assertEqual(intro_offer_section['id'], 'intro-' + gey_option.child_branch.partial_acronym.lower())
 
-    def test_get_intro_finality_offer(self):
-        g = GroupElementYearFactory(
-            parent=self.egy,
-            child_branch__education_group_type__name=GroupType.FINALITY_120_LIST_CHOICE.name
-        )
+    def _create_tree_for_intro_cms(self, type_name_parent, type_name_child, pacronym_child):
         gey = GroupElementYearFactory(
-            parent=g.parent,
-            child_branch__education_group_type__name=TrainingType.MASTER_MD_120.name,
-            child_branch__partial_acronym="TESTFINA",
+            parent=self.egy,
+            child_branch__education_group_type__name=type_name_parent
+        )
+        return GroupElementYearFactory(
+            parent=gey.child_branch,
+            child_branch__education_group_type__name=type_name_child,
+            child_branch__partial_acronym=pacronym_child
+        )
+
+    def test_get_intro_finality_offer(self):
+        gey = self._create_tree_for_intro_cms(
+            GroupType.FINALITY_120_LIST_CHOICE.name,
+            TrainingType.MASTER_MD_120.name,
+            'TESTFINA'
         )
         intro_offer_section, expected_text = self._get_pertinent_intro_section(gey, self.egy)
         self.assertEqual(intro_offer_section['content'], expected_text)

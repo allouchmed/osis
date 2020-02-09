@@ -41,7 +41,8 @@ from cms.tests.factories.translated_text import TranslatedTextFactory
 from cms.tests.factories.translated_text_label import TranslatedTextLabelFactory
 from webservices.api.serializers.section import SectionSerializer, AchievementSectionSerializer, \
     AdmissionConditionSectionSerializer, ContactsSectionSerializer, EvaluationSectionSerializer
-from webservices.business import SKILLS_AND_ACHIEVEMENTS_INTRO, SKILLS_AND_ACHIEVEMENTS_EXTRA, EVALUATION_KEY
+from webservices.business import EVALUATION_KEY
+from webservices.tests.api.test_utils import _create_cms_achievements
 
 
 class SectionSerializerTestCase(TestCase):
@@ -83,13 +84,7 @@ class AchievementSectionSerializerTestCase(TestCase):
         }
         cls.language = settings.LANGUAGE_CODE_EN
         cls.egy = EducationGroupYearFactory()
-        for label in [SKILLS_AND_ACHIEVEMENTS_INTRO, SKILLS_AND_ACHIEVEMENTS_EXTRA]:
-            TranslatedTextFactory(
-                text_label__label=label,
-                reference=cls.egy.id,
-                entity=OFFER_YEAR,
-                language=cls.language
-            )
+        _create_cms_achievements(cls.egy, cls.language)
         cls.serializer = AchievementSectionSerializer(cls.data_to_serialize, context={
             'egy': cls.egy,
             'lang': cls.language

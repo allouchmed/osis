@@ -52,6 +52,11 @@ def create_cms_texts(language, egy, annotations, pertinent_sections):
             text_label__label=section
         )
         annotations.update({section: (t_label.label, t.text)})
+    _create_cms_achievements(egy, language)
+    return annotations
+
+
+def _create_cms_achievements(egy, language):
     for label in [SKILLS_AND_ACHIEVEMENTS_INTRO, SKILLS_AND_ACHIEVEMENTS_EXTRA]:
         TranslatedTextFactory(
             text_label__label=label,
@@ -59,4 +64,3 @@ def create_cms_texts(language, egy, annotations, pertinent_sections):
             entity=OFFER_YEAR,
             language=language
         )
-    return annotations
