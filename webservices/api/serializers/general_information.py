@@ -108,7 +108,7 @@ class GeneralInformationSerializer(serializers.ModelSerializer):
 
     def _get_section_item(self, section, obj, is_common=False):
         return {
-            'label': section + '' if '-commun' in section else '-commun',
+            'label': section + '' if '-commun' in section or not is_common else '-commun',
             'translated_label': getattr(obj, self._get_text_prefix_annotation(is_common) + section + '_label'),
             'text': getattr(obj, self._get_text_prefix_annotation(is_common) + section, None),
         }
