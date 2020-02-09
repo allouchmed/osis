@@ -228,12 +228,9 @@ class EvaluationSectionSerializerTestCase(TestCase):
         self.assertIsNone(serializer['free_text'], 'Should get None and not raise and Error')
 
     def _get_serializer(self, egy, t=None):
-        annotated_egy = EducationGroupYear.objects.filter(id=egy.id).annotate(
+        annotated_egys = EducationGroupYear.objects.filter(id=egy.id).annotate(
             evaluation=Value(t.text if t else None, output_field=CharField()),
             common_evaluation=Value(self.t_common.text, output_field=CharField()),
             evaluation_label=Value(self.t_label.label, output_field=CharField()),
-        ).first()
-        serializer = EvaluationSectionSerializer(
-            annotated_egy, context={'egy': annotated_egy, 'lang': self.language}
-        ).data
-        return serializer
+        )
+        return EvaluationSectionSerializer(annotated_egys.first()).data
