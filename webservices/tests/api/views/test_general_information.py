@@ -26,24 +26,18 @@
 from unittest import mock
 
 from django.conf import settings
-from django.db.models import Value, CharField
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
 from base.business.education_groups.general_information_sections import DETAILED_PROGRAM, \
-    SKILLS_AND_ACHIEVEMENTS, COMMON_DIDACTIC_PURPOSES, INTRODUCTION
-from base.models.education_group_year import EducationGroupYear
-from base.models.enums.education_group_types import TrainingType, GroupType
-from base.tests.factories.education_group_year import EducationGroupYearFactory, EducationGroupYearCommonFactory, \
-    TrainingFactory
-from base.tests.factories.group_element_year import GroupElementYearFactory
+    SKILLS_AND_ACHIEVEMENTS, COMMON_DIDACTIC_PURPOSES
+from base.tests.factories.education_group_year import EducationGroupYearFactory, EducationGroupYearCommonFactory
 from base.tests.factories.person import PersonFactory
 from cms.enums.entity_name import OFFER_YEAR
 from cms.tests.factories.translated_text import TranslatedTextFactory
 from cms.tests.factories.translated_text_label import TranslatedTextLabelFactory
 from webservices.api.serializers.general_information import GeneralInformationSerializer
-from webservices.tests.api.serializers.test_general_information import _get_mocked_sections_per_offer_type
 from webservices.tests.api.test_utils import get_annotated_egy_qs, create_cms_texts
 
 
@@ -139,58 +133,3 @@ class GeneralInformationTestCase(APITestCase):
             }
         )
         self.assertEqual(response.data, serializer.data)
-
-
-class IntroOffersSectionTestCase(APITestCase):
-    @classmethod
-    def setUpTestData(cls):
-        cls.egy = TrainingFactory(education_group_type__name=TrainingType.PGRM_MASTER_120.name)
-        EducationGroupYearCommonFactory(academic_year=cls.egy.academic_year)
-        cls.language = settings.LANGUAGE_CODE_FR[:2]
-
-    def setUp(self):
-        patcher_sections = mock.patch(
-            'base.business.education_groups.general_information_sections.SECTIONS_PER_OFFER_TYPE',
-            _get_mocked_sections_per_offer_type(self.egy)
-        )
-        patcher_sections.start()
-        self.addCleanup(patcher_sections.stop)
-        self.client.force_authenticate(user=PersonFactory().user)
-        self.url = reverse('generalinformations_read', kwargs={
-            'acronym': self.egy.acronym,
-            'year': self.egy.academic_year.year,
-            'language': self.language
-        })
-
-    def test_get_intro_offers(self):
-        gey = GroupElementYearFactory(
-            parent=self.egy,
-            child_branch__education_group_type__name=GroupType.COMMON_CORE.name,
-            child_branch__partial_acronym="TESTTC"
-        )
-        intro_offer_section, expected_text = self._get_pertinent_intro_section(gey)
-        response = self.client.get(self.url)
-        self.assertEqual(response.data, intro_offer_section)
-
-    def _get_pertinent_intro_section(self, gey):
-        t_label = TranslatedTextLabelFactory(
-            text_label__label=INTRODUCTION,
-            language=self.language,
-        )
-        expected_text = TranslatedTextFactory(
-            text_label__label=INTRODUCTION,
-            language=self.language,
-            entity=OFFER_YEAR,
-            reference=gey.child_branch.id
-        )
-        annotated_egy = EducationGroupYear.objects.filter(id=self.egy.id).annotate(**{
-            'intro-' + gey.child_branch.partial_acronym.lower(): Value(expected_text.text, output_field=CharField()),
-            'intro': Value(t_label.label, output_field=CharField())
-        })
-        return GeneralInformationSerializer(
-            annotated_egy.first(), context={
-                'language': self.language,
-                'acronym': self.egy.acronym,
-                'intro_offers': [gey.child_branch.partial_acronym]
-            }
-        ).data, expected_text.text
