@@ -45,6 +45,7 @@ from cms.tests.factories.translated_text_label import TranslatedTextLabelFactory
 from webservices.api.serializers.general_information import GeneralInformationSerializer
 from webservices.business import SKILLS_AND_ACHIEVEMENTS_INTRO, SKILLS_AND_ACHIEVEMENTS_EXTRA
 from webservices.tests.api.serializers.test_general_information import _get_mocked_sections_per_offer_type
+from webservices.tests.api.test_utils import get_annotated_egy_qs
 
 
 class GeneralInformationTestCase(APITestCase):
@@ -98,13 +99,8 @@ class GeneralInformationTestCase(APITestCase):
         sections_patcher.start()
         self.addCleanup(sections_patcher.stop)
         self.client.force_authenticate(user=self.person.user)
-        self.annotated_egy = EducationGroupYear.objects.filter(id=self.egy.id)
-        for label, (translated_label, text) in self.annotations.items():
-            self.annotated_egy = self.annotated_egy.annotate(**{
-                label + '_label': Value(translated_label, output_field=CharField()),
-                label: Value(text, output_field=CharField())
-            })
-        self.annotated_egy = self.annotated_egy.first()
+        self.annotated_egy_qs = get_annotated_egy_qs(self.egy, self.annotations)
+        self.annotated_egy = self.annotated_egy_qs.first()
 
     def test_get_not_authorized(self):
         self.client.force_authenticate(user=None)

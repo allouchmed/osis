@@ -42,6 +42,7 @@ from cms.tests.factories.translated_text import TranslatedTextFactory
 from cms.tests.factories.translated_text_label import TranslatedTextLabelFactory
 from webservices.api.serializers.general_information import GeneralInformationSerializer
 from webservices.business import EVALUATION_KEY, SKILLS_AND_ACHIEVEMENTS_INTRO, SKILLS_AND_ACHIEVEMENTS_EXTRA
+from webservices.tests.api.test_utils import get_annotated_egy_qs
 
 
 class GeneralInformationSerializerTestCase(TestCase):
@@ -95,12 +96,7 @@ class GeneralInformationSerializerTestCase(TestCase):
         )
         patcher_sections.start()
         self.addCleanup(patcher_sections.stop)
-        self.annotated_egy_qs = EducationGroupYear.objects.filter(id=self.egy.id)
-        for label, (translated_label, text) in self.annotations.items():
-            self.annotated_egy_qs = self.annotated_egy_qs.annotate(**{
-                label + '_label': Value(translated_label, output_field=CharField()),
-                label: Value(text, output_field=CharField()) or None
-            })
+        self.annotated_egy_qs = get_annotated_egy_qs(self.egy, self.annotations)
         self.annotated_egy = self.annotated_egy_qs.first()
         self.serializer = GeneralInformationSerializer(
             self.annotated_egy, context={
