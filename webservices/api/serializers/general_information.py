@@ -81,8 +81,7 @@ class GeneralInformationSerializer(serializers.ModelSerializer):
             EVALUATION_KEY: EvaluationSectionSerializer
         }
         for common_section in pertinent_sections['common']:
-            if common_section != EVALUATION_KEY:
-                sections.append(_get_section_item(common_section, obj, True))
+            sections.append(_get_section_item(common_section, obj, True))
 
         for specific_section in pertinent_sections['specific']:
             serializer = cms_serializers.get(specific_section)
