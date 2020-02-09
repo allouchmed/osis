@@ -136,7 +136,10 @@ class GeneralInformation(generics.RetrieveAPIView):
                 ).values('label')[:1])
             )
             qs = qs.annotate(
-                intro=Value(TranslatedTextLabel.objects.get(text_label__label=INTRODUCTION), output_field=CharField()),
+                intro=Value(TranslatedTextLabel.objects.get(
+                    text_label__label=INTRODUCTION,
+                    language=language
+                ), output_field=CharField()),
             )
             qs = qs.annotate(**{
                 'intro-' + intro_text.partial_acronym.lower(): Value(intro_text.text, output_field=CharField())
