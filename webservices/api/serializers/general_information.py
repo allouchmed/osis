@@ -80,11 +80,9 @@ class GeneralInformationSerializer(serializers.ModelSerializer):
             CONTACTS: ContactsSectionSerializer,
             EVALUATION_KEY: EvaluationSectionSerializer
         }
-        if EVALUATION_KEY in pertinent_sections['common']:
-            pertinent_sections['common'].remove(EVALUATION_KEY)
-
         for common_section in pertinent_sections['common']:
-            sections.append(_get_section_item(common_section, obj, True))
+            if common_section != EVALUATION_KEY:
+                sections.append(_get_section_item(common_section, obj, True))
 
         for specific_section in pertinent_sections['specific']:
             serializer = cms_serializers.get(specific_section)
