@@ -143,10 +143,10 @@ def is_eligible_to_delete_education_group_year(person, education_group_yr, raise
 
 def _is_eligible_education_group(person, education_group_yr, raise_exception):
     return (
+        _is_education_group_program_manager(person, education_group_yr, raise_exception) or
         check_link_to_management_entity(education_group_yr, person, raise_exception) and
         (
             person.is_central_manager or person.is_faculty_manager or
-            _is_education_group_program_manager(person, education_group_yr, raise_exception) or
             _is_edition_period_open(education_group_yr, raise_exception)
         )
     )
