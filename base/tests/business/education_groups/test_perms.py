@@ -30,11 +30,13 @@ from unittest import mock
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
 from django.test import TestCase, override_settings
+from django.utils.translation import gettext as _
 
 from base.business.education_groups.perms import check_permission, \
     check_authorized_type, is_eligible_to_edit_general_information, is_eligible_to_edit_admission_condition, \
     GeneralInformationPerms, CommonEducationGroupStrategyPerms, AdmissionConditionPerms, \
-    _is_eligible_to_add_education_group_with_category, CertificateAimsPerms, is_eligible_to_change_education_group
+    _is_eligible_to_add_education_group_with_category, CertificateAimsPerms, is_eligible_to_change_education_group, \
+    _is_eligible_education_group_category
 from base.models.academic_calendar import get_academic_calendar_by_date_and_reference_and_data_year
 from base.models.enums import academic_calendar_type
 from base.models.enums.academic_calendar_type import EDUCATION_GROUP_EDITION
@@ -42,6 +44,7 @@ from base.models.enums.education_group_categories import TRAINING, Categories
 from base.tests.factories.academic_calendar import AcademicCalendarFactory, OpenAcademicCalendarFactory
 from base.tests.factories.academic_year import AcademicYearFactory, create_current_academic_year
 from base.tests.factories.authorized_relationship import AuthorizedRelationshipFactory
+from base.tests.factories.education_group_type import GroupEducationGroupTypeFactory, EducationGroupTypeFactory
 from base.tests.factories.education_group_year import EducationGroupYearFactory, \
     EducationGroupYearCommonBachelorFactory, TrainingFactory, MiniTrainingFactory, GroupFactory
 from base.tests.factories.person import PersonFactory, PersonWithPermissionsFactory, CentralManagerFactory, \
@@ -171,12 +174,30 @@ class TestPerms(TestCase):
         self.assertTrue(result)
 
     def test_program_manager_is_not_eligible_to_change_education_group(self):
-        result = is_eligible_to_change_education_group(
-            ProgramManagerRoleFactory(),
-            EducationGroupYearFactory(),
-            raise_exception=False
+        with self.assertRaises(PermissionDenied) as error:
+            result = is_eligible_to_change_education_group(
+                ProgramManagerRoleFactory(),
+                EducationGroupYearFactory(education_group_type=EducationGroupTypeFactory()),
+                raise_exception=True
+            )
+            self.assertFalse(result)
+        self.assertEqual(
+            str(error.exception), _('The user has not permission to change education groups.')
         )
-        self.assertFalse(result)
+
+    @mock.patch('base.business.education_groups.perms._is_edition_period_open')
+    def test_program_manager_is_not_eligible_to_change_group_period_closed(self, mock_period_open):
+        mock_period_open.return_value = False
+        with self.assertRaises(PermissionDenied) as error:
+            result = _is_eligible_education_group_category(
+                ProgramManagerRoleFactory(),
+                EducationGroupYearFactory(education_group_type=GroupEducationGroupTypeFactory),
+                raise_exception=True
+            )
+            self.assertFalse(result)
+        self.assertEqual(
+            str(error.exception), _('The user can only edit a training or a mini-training during this period')
+        )
 
 
 @override_settings(YEAR_LIMIT_EDG_MODIFICATION=2019)

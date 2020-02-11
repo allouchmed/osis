@@ -76,7 +76,8 @@ def _is_eligible_to_add_education_group(person, education_group_yr, category, ed
 def is_eligible_to_change_education_group(person, education_group_yr, raise_exception=False):
     return check_permission(person, "base.change_educationgroup", raise_exception) and \
            _is_eligible_education_group(person, education_group_yr, raise_exception) and \
-           _is_year_editable(education_group_yr, raise_exception)
+           _is_year_editable(education_group_yr, raise_exception) and \
+           _is_eligible_education_group_category(person, education_group_yr, raise_exception)
 
 
 def is_eligible_to_change_education_group_content(person, education_group_yr, raise_exception=False):
@@ -149,6 +150,15 @@ def _is_eligible_education_group(person, education_group_yr, raise_exception):
             _is_edition_period_open(education_group_yr, raise_exception)
         )
     )
+
+
+def _is_eligible_education_group_category(person, education_group_yr, raise_exception):
+    result = (education_group_yr.education_group_type.category in [TRAINING, MINI_TRAINING] or
+              person.is_faculty_manager and _is_edition_period_open(education_group_yr, False) or
+              person.is_central_manager)
+    error_msg = _('The user can only edit a training or a mini-training during this period')
+    can_raise_exception(raise_exception, result, error_msg)
+    return result
 
 
 def _is_education_group_program_manager(person, education_group_yr, raise_exception):

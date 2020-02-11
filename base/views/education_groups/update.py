@@ -186,14 +186,16 @@ def _get_success_redirect_url(root, education_group_year):
 def _update_group(request, education_group_year, root, groupelementyear_formset):
     # TODO :: IMPORTANT :: Fix urls patterns to get the GroupElementYear_id and the root_id in the url path !
     # TODO :: IMPORTANT :: Need to update form to filter on list of parents, not only on the first direct parent
-    form_education_group_year = GroupForm(request.POST or None, instance=education_group_year, user=request.user)
+    form = GroupForm(request.POST or None, instance=education_group_year, user=request.user)
+    education_group_year_form = form.education_group_year_form
+    groupelementyear_formset.form.context = education_group_year_form.get_context()
     html_page = "education_group/update_groups.html"
     has_content = len(groupelementyear_formset.queryset) > 0
     if request.method == 'POST':
-        if form_education_group_year.is_valid() and (not has_content or groupelementyear_formset.is_valid()):
+        if form.is_valid() and (not has_content or groupelementyear_formset.is_valid()):
             return _common_success_redirect(
                 request,
-                form_education_group_year,
+                form,
                 root, groupelementyear_formset if has_content else None
             )
         else:
@@ -201,8 +203,10 @@ def _update_group(request, education_group_year, root, groupelementyear_formset)
 
     return render(request, html_page, {
         "education_group_year": education_group_year,
-        "form_education_group_year": form_education_group_year.forms[forms.ModelForm],
-        "form_education_group": form_education_group_year.forms[EducationGroupModelForm],
+        "form_education_group_year": form.forms[forms.ModelForm],
+        "form_education_group": form.forms[EducationGroupModelForm],
+        "show_identification_tab": show_category_tab(education_group_year_form, IDENTIFICATION_FIELDS_CATEGORY),
+        "show_content_tab": show_category_tab(groupelementyear_formset.empty_form, CONTENT_FIELDS_CATEGORY),
         'group_element_years': groupelementyear_formset,
         'show_minor_major_option_table': education_group_year.is_minor_major_option_list_choice
     })
@@ -289,7 +293,8 @@ def _update_mini_training(request, education_group_year, root, groupelementyear_
     # TODO :: IMPORTANT :: Fix urls patterns to get the GroupElementYear_id and the root_id in the url path !
     # TODO :: IMPORTANT :: Need to upodate form to filter on list of parents, not only on the first direct parent
     form = MiniTrainingForm(request.POST or None, instance=education_group_year, user=request.user)
-
+    education_group_year_form = form.education_group_year_form
+    groupelementyear_formset.form.context = education_group_year_form.get_context()
     if request.method == 'POST':
         if form.is_valid() and groupelementyear_formset.is_valid():
             return _common_success_redirect(request, form, root, groupelementyear_formset)
@@ -300,5 +305,7 @@ def _update_mini_training(request, education_group_year, root, groupelementyear_
         "form_education_group_year": form.forms[forms.ModelForm],
         "education_group_year": education_group_year,
         "form_education_group": form.forms[EducationGroupModelForm],
+        "show_identification_tab": show_category_tab(education_group_year_form, IDENTIFICATION_FIELDS_CATEGORY),
+        "show_content_tab": show_category_tab(groupelementyear_formset.empty_form, CONTENT_FIELDS_CATEGORY),
         'group_element_years': groupelementyear_formset
     })
