@@ -44,7 +44,7 @@ from base.models.entity_version import find_pedagogical_entities_version, get_la
 from base.models.enums import education_group_categories
 from base.models.enums.education_group_categories import Categories, TRAINING
 from base.models.enums.education_group_types import MiniTrainingType, GroupType
-from base.models.enums.groups import FACULTY_MANAGER_GROUP
+from base.models.enums.groups import FACULTY_MANAGER_GROUP, CENTRAL_MANAGER_GROUP
 from program_management.business.group_element_years import management
 from reference.models.language import Language
 from rules_management.enums import TRAINING_PGRM_ENCODING_PERIOD, TRAINING_DAILY_MANAGEMENT, \
@@ -133,8 +133,9 @@ class PermissionFieldEducationGroupYearMixin(PermissionFieldEducationGroupMixin)
         return EventPermEducationGroupEdition(obj=education_group_year, raise_exception=False).is_open()
 
     def check_user_permission(self, field_reference):
+        linked_groups = [CENTRAL_MANAGER_GROUP, FACULTY_MANAGER_GROUP]
         if field_reference.user_groups:
-            if FACULTY_MANAGER_GROUP in [group.name for group in field_reference.user_groups]:
+            if all(group in [user_group.name for user_group in field_reference.user_groups] for group in linked_groups):
                 return check_link_to_management_entity(self.instance, self.user.person, raise_exception=False)
             return True
         elif self._check_at_permissions_level(field_reference):
