@@ -156,23 +156,32 @@ class EducationGroupYearModelFormMixin(TestCase):
 
     @patch('base.forms.education_group.common.check_link_to_management_entity')
     def _test_check_link_to_mgmt_entity_in_user_perm_if_faculty_manager(self, form_class, mock_check_link):
+        form_class.instance = self.parent_education_group_year
         self._prepare_form_class(form_class, FacultyManagerGroupFactory())
         self.assertTrue(mock_check_link.called)
 
     @patch('base.forms.education_group.common.check_link_to_management_entity')
     def _test_check_link_to_mgmt_entity_in_user_perm_if_central_manager(self, form_class, mock_check_link):
+        form_class.instance = self.parent_education_group_year
         self._prepare_form_class(form_class, CentralManagerGroupFactory())
         self.assertTrue(mock_check_link.called)
 
     @patch('base.forms.education_group.common.check_link_to_management_entity')
-    def _test_does_not_checklink_to_mgmt_entity_in_user_perm_if_program_manager(self, form_class, mock_check_link):
+    def _test_does_not_check_link_to_mgmt_entity_in_user_perm_if_program_manager(self, form_class, mock_check_link):
+        form_class.instance = self.parent_education_group_year
+        self._prepare_form_class(form_class, ProgramManagerGroupFactory())
+        self.assertFalse(mock_check_link.called)
+
+    @patch('base.forms.education_group.common.check_link_to_management_entity')
+    def _test_does_not_check_link_to_mgmt_entity_if_instance_not_created_yet(self, form_class, mock_check_link):
+        form_class.instance = self.parent_education_group_year
+        form_class.instance.pk = None
         self._prepare_form_class(form_class, ProgramManagerGroupFactory())
         self.assertFalse(mock_check_link.called)
 
     def _prepare_form_class(self, form_class, group):
         field_reference = FieldReferenceFactory()
         field_reference.user_groups = [group]
-        form_class.instance = self.parent_education_group_year
         form_class.user = self.user
         form_class.check_user_permission(form_class, field_reference)
 

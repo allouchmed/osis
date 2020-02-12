@@ -106,7 +106,7 @@ def create_education_group(request, category, education_group_type_pk, root_id=N
         cached_data['academic_year'] = starting_academic_year()
 
     initial_academic_year = parent.academic_year_id if parent else cached_data.get('academic_year')
-    form_education_group_year = FORMS_BY_CATEGORY[category](
+    form = FORMS_BY_CATEGORY[category](
         request.POST or None,
         parent=parent,
         user=request.user,
@@ -115,27 +115,25 @@ def create_education_group(request, category, education_group_type_pk, root_id=N
     )
 
     if request.method == 'POST':
-        if form_education_group_year.is_valid():
-            return _common_success_redirect(request, form_education_group_year, root_id)
+        if form.is_valid():
+            return _common_success_redirect(request, form, root_id)
         else:
             show_error_message_for_form_invalid(request)
 
     data = {
-        "form_education_group_year": form_education_group_year.forms[forms.ModelForm],
-        "form_education_group": form_education_group_year.forms[EducationGroupModelForm],
+        "form_education_group_year": form.forms[forms.ModelForm],
+        "form_education_group": form.forms[EducationGroupModelForm],
         "parent": parent,
         'root_pk': root_id,
-        "is_finality_types": education_group_type.name in TrainingType.finality_types()
+        "is_finality_types": education_group_type.name in TrainingType.finality_types(),
+        "show_identification_tab": show_category_tab(form.education_group_year_form, IDENTIFICATION_FIELDS_CATEGORY),
+        "show_diploma_tab": show_category_tab(form.education_group_year_form, DIPLOMA_FIELDS_CATEGORY),
     }
-
-    education_group_year_form = form_education_group_year.education_group_year_form
 
     if category == education_group_categories.TRAINING:
         data.update(
             {
-                "form_hops": form_education_group_year.hops_form,
-                "show_identification_tab": show_category_tab(education_group_year_form, IDENTIFICATION_FIELDS_CATEGORY),
-                "show_diploma_tab": show_category_tab(education_group_year_form, DIPLOMA_FIELDS_CATEGORY),
+                "form_hops": form.hops_form
             }
         )
 
