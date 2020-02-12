@@ -131,6 +131,11 @@ class TestGroupModelFormModelForm(EducationGroupYearModelFormMixin):
         )
         self.assertIsNone(form.fields["management_entity"].initial)
 
+    def test_check_link_to_mgmt_entity_in_user_perm_according_to_roles(self):
+        self._test_check_link_to_mgmt_entity_in_user_perm_if_faculty_manager(self.form_class)
+        self._test_check_link_to_mgmt_entity_in_user_perm_if_central_manager((self.form_class))
+        self._test_does_not_checklink_to_mgmt_entity_in_user_perm_if_program_manager(self.form_class)
+
 
 class TestGroupForm(TestCase):
     @classmethod
