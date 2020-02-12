@@ -174,9 +174,9 @@ class EducationGroupYearModelFormMixin(TestCase):
 
     @patch('base.forms.education_group.common.check_link_to_management_entity')
     def _test_does_not_check_link_to_mgmt_entity_if_instance_not_created_yet(self, form_class, mock_check_link):
-        form_class.instance = self.parent_education_group_year
+        form_class.instance = EducationGroupYearFactory()
         form_class.instance.pk = None
-        self._prepare_form_class(form_class, ProgramManagerGroupFactory())
+        self._prepare_form_class(form_class, CentralManagerGroupFactory())
         self.assertFalse(mock_check_link.called)
 
     def _prepare_form_class(self, form_class, group):
