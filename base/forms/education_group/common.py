@@ -228,8 +228,10 @@ class EducationGroupYearModelForm(ValidationRuleEducationGroupTypeMixin, Permiss
     def _filter_management_entity_according_to_person(self):
         if 'management_entity' in self.fields:
             # includes mgmt_entity from current instance if any to ensure choice is still available
-            entities = {self.instance.management_entity.pk, *self.user.person.linked_entities}
-            self.fields['management_entity'].queryset = EntityVersion.objects.filter(entity__pk__in=entities)
+            entities = {self.instance.management_entity, *self.user.person.linked_entities}
+            self.fields['management_entity'].queryset |= EntityVersion.objects.filter(
+                entity__in=entities
+            )
 
     def _disable_field(self, key, initial_value=None):
         field = self.fields[key]

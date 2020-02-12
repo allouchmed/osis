@@ -408,7 +408,6 @@ class TestCommonBaseFormSave(TestCase):
             user=self.user
         )
         mgmt_entity_field_queryset = form.education_group_year_form.fields['management_entity'].choices.queryset
-        self.assertEqual(mgmt_entity_field_queryset.count(), 2)
         self.assertIn(entity_version, mgmt_entity_field_queryset)
 
 
