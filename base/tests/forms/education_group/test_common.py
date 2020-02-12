@@ -46,6 +46,7 @@ from base.tests.factories.authorized_relationship import AuthorizedRelationshipF
 from base.tests.factories.campus import CampusFactory
 from base.tests.factories.education_group_type import EducationGroupTypeFactory, MiniTrainingEducationGroupTypeFactory
 from base.tests.factories.education_group_year import EducationGroupYearFactory, MiniTrainingFactory
+from base.tests.factories.entity import EntityFactory
 from base.tests.factories.entity_version import MainEntityVersionFactory, EntityVersionFactory
 from base.tests.factories.group import FacultyManagerGroupFactory, CentralManagerGroupFactory, \
     ProgramManagerGroupFactory
@@ -391,6 +392,24 @@ class TestCommonBaseFormSave(TestCase):
         self.assertTrue(form.is_valid(), form.errors)
         form.save()
         self.assertTrue(mock_create_initial_group_element_year.called)
+
+    def test_ensure_current_mgmt_entity_is_always_available_in_choices(self):
+        entity_version = EntityVersionFactory(entity=EntityFactory())
+        other_entity_version = EntityVersionFactory(entity=EntityFactory())
+        self.user.person.linked_entities = {other_entity_version.entity.pk}
+        education_group_year = EducationGroupYearFactory(
+            academic_year=self.expected_educ_group_year.academic_year,
+            management_entity=entity_version.entity,
+            education_group_type=self.education_group_type,
+        )
+        form = self.form_class(
+            data=self.post_data,
+            instance=education_group_year,
+            user=self.user
+        )
+        mgmt_entity_field_queryset = form.education_group_year_form.fields['management_entity'].choices.queryset
+        self.assertEqual(mgmt_entity_field_queryset.count(), 2)
+        self.assertIn(entity_version, mgmt_entity_field_queryset)
 
 
 def _get_valid_post_data(category):
