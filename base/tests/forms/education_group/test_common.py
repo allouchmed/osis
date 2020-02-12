@@ -47,9 +47,12 @@ from base.tests.factories.campus import CampusFactory
 from base.tests.factories.education_group_type import EducationGroupTypeFactory, MiniTrainingEducationGroupTypeFactory
 from base.tests.factories.education_group_year import EducationGroupYearFactory, MiniTrainingFactory
 from base.tests.factories.entity_version import MainEntityVersionFactory, EntityVersionFactory
+from base.tests.factories.group import FacultyManagerGroupFactory, CentralManagerGroupFactory, \
+    ProgramManagerGroupFactory
 from base.tests.factories.group_element_year import GroupElementYearFactory
 from base.tests.factories.person import PersonFactory, FacultyManagerFactory
 from base.tests.factories.person_entity import PersonEntityFactory
+from rules_management.tests.fatories import FieldReferenceFactory
 
 
 class EducationGroupYearModelFormMixin(TestCase):
@@ -150,6 +153,28 @@ class EducationGroupYearModelFormMixin(TestCase):
             form.fields["management_entity"].initial,
             self.parent_education_group_year.management_entity_version,
         )
+
+    @patch('base.forms.education_group.common.check_link_to_management_entity')
+    def _test_check_link_to_mgmt_entity_in_user_perm_if_faculty_manager(self, form_class, mock_check_link):
+        self._prepare_form_class(form_class, FacultyManagerGroupFactory())
+        self.assertTrue(mock_check_link.called)
+
+    @patch('base.forms.education_group.common.check_link_to_management_entity')
+    def _test_check_link_to_mgmt_entity_in_user_perm_if_central_manager(self, form_class, mock_check_link):
+        self._prepare_form_class(form_class, CentralManagerGroupFactory())
+        self.assertTrue(mock_check_link.called)
+
+    @patch('base.forms.education_group.common.check_link_to_management_entity')
+    def _test_does_not_checklink_to_mgmt_entity_in_user_perm_if_program_manager(self, form_class, mock_check_link):
+        self._prepare_form_class(form_class, ProgramManagerGroupFactory())
+        self.assertFalse(mock_check_link.called)
+
+    def _prepare_form_class(self, form_class, group):
+        field_reference = FieldReferenceFactory()
+        field_reference.user_groups = [group]
+        form_class.instance = self.parent_education_group_year
+        form_class.user = self.user
+        form_class.check_user_permission(form_class, field_reference)
 
 
 class TestCommonBaseFormIsValid(TestCase):
