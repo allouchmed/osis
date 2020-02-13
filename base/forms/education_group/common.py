@@ -134,8 +134,9 @@ class PermissionFieldEducationGroupYearMixin(PermissionFieldEducationGroupMixin)
 
     def check_user_permission(self, field_reference):
         linked_groups = [CENTRAL_MANAGER_GROUP, FACULTY_MANAGER_GROUP]
+        user_groups_names = [user_group.name for user_group in field_reference.user_groups]
         if field_reference.user_groups:
-            if any(group in [user_group.name for user_group in field_reference.user_groups] for group in linked_groups):
+            if self.instance.pk and any(group in user_groups_names for group in linked_groups):
                 return check_link_to_management_entity(self.instance, self.user.person, raise_exception=False)
             return True
         elif self._check_at_permissions_level(field_reference):
