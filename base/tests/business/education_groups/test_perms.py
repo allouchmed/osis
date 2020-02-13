@@ -204,7 +204,8 @@ class TestPerms(TestCase):
         with self.assertRaises(PermissionDenied) as error:
             result = _is_eligible_education_group_program_manager(
                 EducationGroupYearFactory(education_group_type=EducationGroupTypeFactory()),
-                ProgramManagerRoleFactory()
+                ProgramManagerRoleFactory(),
+                raise_exception=True
             )
             self.assertFalse(result)
         self.assertEqual(
@@ -216,7 +217,8 @@ class TestPerms(TestCase):
         faculty_and_program_manager.user.groups.add(ProgramManagerGroupFactory())
         result = _is_eligible_education_group_program_manager(
             EducationGroupYearFactory(education_group_type=EducationGroupTypeFactory()),
-            faculty_and_program_manager
+            faculty_and_program_manager,
+            raise_exception=True
         )
         self.assertFalse(result)
 
