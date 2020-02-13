@@ -40,7 +40,7 @@ from base.models.campus import Campus
 from base.models.education_group import EducationGroup
 from base.models.education_group_type import find_authorized_types, EducationGroupType
 from base.models.education_group_year import EducationGroupYear
-from base.models.entity_version import find_pedagogical_entities_version, get_last_version
+from base.models.entity_version import find_pedagogical_entities_version, get_last_version, EntityVersion
 from base.models.enums import education_group_categories
 from base.models.enums.education_group_categories import Categories, TRAINING
 from base.models.enums.education_group_types import MiniTrainingType, GroupType
@@ -227,8 +227,11 @@ class EducationGroupYearModelForm(ValidationRuleEducationGroupTypeMixin, Permiss
 
     def _filter_management_entity_according_to_person(self):
         if 'management_entity' in self.fields:
-            self.fields['management_entity'].queryset = \
-                self.fields['management_entity'].queryset.filter(entity__in=self.user.person.linked_entities)
+            # includes mgmt_entity from current instance if any to ensure choice is still available
+            entities = {self.instance.management_entity, *self.user.person.linked_entities}
+            self.fields['management_entity'].queryset |= EntityVersion.objects.filter(
+                entity__in=entities
+            )
 
     def _disable_field(self, key, initial_value=None):
         field = self.fields[key]
