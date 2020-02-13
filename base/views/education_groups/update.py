@@ -295,8 +295,11 @@ def _update_mini_training(request, education_group_year, root, groupelementyear_
     form = MiniTrainingForm(request.POST or None, instance=education_group_year, user=request.user)
     education_group_year_form = form.education_group_year_form
     groupelementyear_formset.form.context = education_group_year_form.get_context()
+    forms_valid = form.is_valid()
+    if show_category_tab(groupelementyear_formset.empty_form, CONTENT_FIELDS_CATEGORY):
+        forms_valid = forms_valid and groupelementyear_formset.is_valid()
     if request.method == 'POST':
-        if form.is_valid() and groupelementyear_formset.is_valid():
+        if forms_valid:
             return _common_success_redirect(request, form, root, groupelementyear_formset)
         else:
             show_error_message_for_form_invalid(request)
