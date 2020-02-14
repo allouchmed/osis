@@ -212,7 +212,7 @@ class TestPerms(TestCase):
             str(error.exception), _('The user is not the program manager of the education group')
         )
 
-    def test_is_program_manager_and_faculty_manager_not_eligible_education_group_raise_no_exception(self):
+    def test_is_program_manager_and_faculty_manager_not_eligible_education_group(self):
         with self.assertRaises(PermissionDenied) as error:
             faculty_and_program_manager = FacultyManagerFactory()
             faculty_and_program_manager.user.groups.add(ProgramManagerGroupFactory())
@@ -223,8 +223,32 @@ class TestPerms(TestCase):
             )
             self.assertFalse(result)
         self.assertEqual(
-            str(error.exception), _('The user is not attached to the management entity')
+            str(error.exception), _('The user is not the program manager of the education group')
         )
+
+    def test_program_manager_and_faculty_manager_is_eligible_education_group_linked_to_egy_entity(self):
+        faculty_and_program_manager = FacultyManagerFactory()
+        faculty_and_program_manager.user.groups.add(ProgramManagerGroupFactory())
+        education_group_year = EducationGroupYearFactory()
+        PersonEntityFactory(person=faculty_and_program_manager, entity=education_group_year.management_entity)
+        result = _is_eligible_education_group(
+            faculty_and_program_manager,
+            education_group_year,
+            raise_exception=True
+        )
+        self.assertTrue(result)
+
+    def test_program_manager_and_faculty_manager_is_eligible_education_group_linked_to_program(self):
+        faculty_and_program_manager = FacultyManagerFactory()
+        faculty_and_program_manager.user.groups.add(ProgramManagerGroupFactory())
+        education_group_year = EducationGroupYearFactory()
+        ProgramManagerFactory(person=faculty_and_program_manager, education_group=education_group_year.education_group)
+        result = _is_eligible_education_group(
+            faculty_and_program_manager,
+            education_group_year,
+            raise_exception=True
+        )
+        self.assertTrue(result)
 
 
 @override_settings(YEAR_LIMIT_EDG_MODIFICATION=2019)
