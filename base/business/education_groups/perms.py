@@ -153,9 +153,13 @@ def _is_eligible_education_group(person, education_group_yr, raise_exception):
 
 
 def _is_eligible_education_group_program_manager(education_group_yr, person, raise_exception):
-    is_pgm_manager_only = person.is_program_manager and not(person.is_faculty_manager or person.is_central_manager)
-    raise_exception = raise_exception and is_pgm_manager_only
-    return _is_education_group_program_manager(person, education_group_yr, raise_exception=raise_exception)
+    return _is_eligible_education_group_as_program_manager_only(person, education_group_yr, raise_exception) or \
+           _is_education_group_program_manager(person, education_group_yr, False)
+
+
+def _is_eligible_education_group_as_program_manager_only(person, education_group_yr, raise_exception):
+    return person.is_program_manager and not (person.is_faculty_manager or person.is_central_manager) and \
+           _is_education_group_program_manager(person, education_group_yr, raise_exception=raise_exception)
 
 
 def _is_eligible_education_group_category(person, education_group_yr, raise_exception):
