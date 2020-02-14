@@ -152,8 +152,8 @@ def _is_eligible_education_group(person, education_group_yr, raise_exception):
         try:
             # raise_exception defaulted to True to ensure exception is raised
             validate_role_perms(person, education_group_yr, True)
-        except Exception as e:
-            exceptions += (e,)
+        except PermissionDenied as exception:
+            exceptions += (exception,)
 
     # permission result must be a disjunction (OR) of both validators results
     result = len(exceptions) < len(education_group_role_perms_validators)
