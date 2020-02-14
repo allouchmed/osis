@@ -36,7 +36,7 @@ from base.business.education_groups.perms import check_permission, \
     check_authorized_type, is_eligible_to_edit_general_information, is_eligible_to_edit_admission_condition, \
     GeneralInformationPerms, CommonEducationGroupStrategyPerms, AdmissionConditionPerms, \
     _is_eligible_to_add_education_group_with_category, CertificateAimsPerms, is_eligible_to_change_education_group, \
-    _is_eligible_education_group_category, _is_eligible_education_group_program_manager
+    _is_eligible_education_group_category, _is_eligible_education_group
 from base.models.academic_calendar import get_academic_calendar_by_date_and_reference_and_data_year
 from base.models.enums import academic_calendar_type
 from base.models.enums.academic_calendar_type import EDUCATION_GROUP_EDITION
@@ -202,9 +202,9 @@ class TestPerms(TestCase):
 
     def test_is_program_manager_only_not_eligible_education_group(self):
         with self.assertRaises(PermissionDenied) as error:
-            result = _is_eligible_education_group_program_manager(
-                EducationGroupYearFactory(education_group_type=EducationGroupTypeFactory()),
+            result = _is_eligible_education_group(
                 ProgramManagerRoleFactory(),
+                EducationGroupYearFactory(education_group_type=EducationGroupTypeFactory()),
                 raise_exception=True
             )
             self.assertFalse(result)
@@ -213,14 +213,18 @@ class TestPerms(TestCase):
         )
 
     def test_is_program_manager_and_faculty_manager_not_eligible_education_group_raise_no_exception(self):
-        faculty_and_program_manager = FacultyManagerFactory()
-        faculty_and_program_manager.user.groups.add(ProgramManagerGroupFactory())
-        result = _is_eligible_education_group_program_manager(
-            EducationGroupYearFactory(education_group_type=EducationGroupTypeFactory()),
-            faculty_and_program_manager,
-            raise_exception=True
+        with self.assertRaises(PermissionDenied) as error:
+            faculty_and_program_manager = FacultyManagerFactory()
+            faculty_and_program_manager.user.groups.add(ProgramManagerGroupFactory())
+            result = _is_eligible_education_group(
+                faculty_and_program_manager,
+                EducationGroupYearFactory(education_group_type=EducationGroupTypeFactory()),
+                raise_exception=True
+            )
+            self.assertFalse(result)
+        self.assertEqual(
+            str(error.exception), _('The user is not attached to the management entity')
         )
-        self.assertFalse(result)
 
 
 @override_settings(YEAR_LIMIT_EDG_MODIFICATION=2019)
