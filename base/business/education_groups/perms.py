@@ -142,19 +142,34 @@ def is_eligible_to_delete_education_group_year(person, education_group_yr, raise
 
 
 def _is_eligible_education_group(person, education_group_yr, raise_exception):
+    education_group_role_perms_validators = [
+        _is_education_group_program_manager,
+        _is_eligible_education_group_central_or_faculty_mngr
+    ]
+
+    exceptions = ()
+    for validate_role_perms in education_group_role_perms_validators:
+        try:
+            # raise_exception defaulted to True to ensure exception is raised
+            validate_role_perms(person, education_group_yr, True)
+        except PermissionDenied as exception:
+            exceptions += (exception,)
+
+    # permission result must be a disjunction (OR) of both validators results
+    result = len(exceptions) < len(education_group_role_perms_validators)
+    error_msg = exceptions and str(exceptions[0])
+    can_raise_exception(raise_exception, result, error_msg)
+    return result
+
+
+def _is_eligible_education_group_central_or_faculty_mngr(person, education_group_yr, raise_exception):
     return (
-        _is_eligible_education_group_program_manager(education_group_yr, person) or
-        check_link_to_management_entity(education_group_yr, person, raise_exception) and
-        (
-            person.is_central_manager or person.is_faculty_manager or
-            _is_edition_period_open(education_group_yr, raise_exception)
-        )
+            check_link_to_management_entity(education_group_yr, person, raise_exception) and
+            (
+                    person.is_central_manager or person.is_faculty_manager or
+                    _is_edition_period_open(education_group_yr, raise_exception)
+            )
     )
-
-
-def _is_eligible_education_group_program_manager(education_group_yr, person):
-    is_pgm_manager_only = person.is_program_manager and not(person.is_faculty_manager or person.is_central_manager)
-    return _is_education_group_program_manager(person, education_group_yr, raise_exception=is_pgm_manager_only)
 
 
 def _is_eligible_education_group_category(person, education_group_yr, raise_exception):
