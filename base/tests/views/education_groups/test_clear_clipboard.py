@@ -40,6 +40,9 @@ class TestClearClipboard(TestCase):
         cls.url = reverse("education_group_clear_clipboard")
         cls.central_manager = CentralManagerFactory("can_access_education_group", user__superuser=False)
 
+    def setUp(self):
+        self.client.force_login(self.central_manager.user)
+
     def test_when_not_logged(self):
         response = self.client.post(self.url)
         self.assertRedirects(response, "/login/?next={}".format(self.url))
@@ -53,24 +56,20 @@ class TestClearClipboard(TestCase):
         self.assertEqual(response.status_code, HttpResponseForbidden.status_code)
 
     def test_user_with_permission_get_method(self):
-        self.client.force_login(self.central_manager.user)
         response = self.client.get(self.url)
 
         self.assertTemplateUsed(response, "method_not_allowed.html")
         self.assertEqual(response.status_code, HttpResponseNotAllowed.status_code)
 
     def test_user_with_permission_post_method_not_ajax(self):
-        self.client.force_login(self.central_manager.user)
         response = self.client.post(self.url)
         self.assertEqual(response.status_code, HttpResponseBadRequest.status_code)
 
     def test_user_with_permission_post_method_ajax(self):
-        self.client.force_login(self.central_manager.user)
         response = self.client.post(self.url, HTTP_X_REQUESTED_WITH='XMLHttpRequest')
         self.assertEqual(response.status_code, JsonResponse.status_code)
 
     def test_clipboard_is_cleared(self):
-        self.client.force_login(self.central_manager.user)
         luy = LearningUnitYearFactory()
 
         element_cache = ElementCache(self.central_manager.user)

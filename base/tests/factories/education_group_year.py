@@ -115,7 +115,8 @@ class TrainingFactory(EducationGroupYearFactory):
 
 
 class GroupFactory(EducationGroupYearFactory):
-    education_group_type__group = True
+    education_group_type = factory.SubFactory('base.tests.factories.education_group_type.EducationGroupTypeFactory',
+                                              category=education_group_categories.GROUP)
 
 
 class EducationGroupYearCommonBachelorFactory(EducationGroupYearFactory):

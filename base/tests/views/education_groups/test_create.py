@@ -42,7 +42,7 @@ from base.models.enums.education_group_categories import TRAINING, Categories
 from base.models.enums.entity_type import FACULTY
 from base.models.enums.schedule_type import DAILY
 from base.models.exceptions import ValidationWarning
-from base.tests.factories.academic_year import AcademicYearFactory, create_current_academic_year
+from base.tests.factories.academic_year import AcademicYearFactory
 from base.tests.factories.authorized_relationship import AuthorizedRelationshipFactory
 from base.tests.factories.business.learning_units import GenerateAcademicYear
 from base.tests.factories.education_group_type import EducationGroupTypeFactory
@@ -58,7 +58,7 @@ from reference.tests.factories.language import LanguageFactory
 class TestCreateMixin(TestCase):
     @classmethod
     def setUpTestData(cls):
-        cls.current_academic_year = create_current_academic_year()
+        cls.current_academic_year = AcademicYearFactory(current=True)
         start_year = AcademicYearFactory(year=cls.current_academic_year.year + 1)
         end_year = AcademicYearFactory(year=cls.current_academic_year.year + 10)
         cls.generated_ac_years = GenerateAcademicYear(start_year, end_year)

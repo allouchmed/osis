@@ -24,12 +24,10 @@
 #
 ##############################################################################
 import json
-import urllib
 from unittest import mock
 
-from django.contrib.auth.models import Permission
 from django.core.cache import cache
-from django.http import HttpResponseForbidden, QueryDict
+from django.http import HttpResponseForbidden
 from django.test import TestCase
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
@@ -39,11 +37,10 @@ from base.forms.education_groups import EducationGroupFilter
 from base.models.enums import education_group_categories
 from base.models.enums.education_group_categories import TRAINING, MINI_TRAINING, GROUP
 from base.tests.factories.academic_year import AcademicYearFactory
-from base.tests.factories.academic_year import create_current_academic_year
 from base.tests.factories.education_group_type import EducationGroupTypeFactory, \
     MiniTrainingEducationGroupTypeFactory, \
     GroupEducationGroupTypeFactory
-from base.tests.factories.education_group_year import EducationGroupYearFactory
+from base.tests.factories.education_group_year import EducationGroupYearFactory, GroupFactory, TrainingFactory
 from base.tests.factories.entity import EntityFactory
 from base.tests.factories.entity_version import EntityVersionFactory
 from base.tests.factories.person import PersonFactory, PersonWithPermissionsFactory
@@ -54,14 +51,14 @@ from base.utils.cache import RequestCache
 FILTER_DATA = {"acronym": ["LBIR"], "title": ["dummy filter"]}
 TITLE_EDPH2 = "Edph training 2"
 TITLE_EDPH3 = "Edph training 3 [120], sciences"
+EDUCATION_GROUP_SEARCH_TEMPLATE = "education_group/search.html"
 
 
 class TestEducationGroupSearchView(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.user = UserFactory()
-        cls.person = PersonFactory(user=cls.user)
-        cls.user.user_permissions.add(Permission.objects.get(codename="can_access_education_group"))
+        cls.person = PersonWithPermissionsFactory("can_access_education_group", user=cls.user)
         cls.url = reverse("education_groups")
 
     def setUp(self):
@@ -84,7 +81,7 @@ class TestEducationGroupSearchView(TestCase):
     def test_search_education_group_using_template_use(self):
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, "education_group/search.html")
+        self.assertTemplateUsed(response, EDUCATION_GROUP_SEARCH_TEMPLATE)
 
     def test_search_education_group_keys_exists_in_context(self):
         response = self.client.get(self.url)
@@ -103,60 +100,51 @@ class TestEducationGroupDataSearchFilter(TestCase):
     """
     @classmethod
     def setUpTestData(cls):
-        cls.current_academic_year = create_current_academic_year()
+        cls.current_academic_year = AcademicYearFactory(current=True)
         cls.previous_academic_year = AcademicYearFactory(year=cls.current_academic_year.year - 1)
-
-        cls.type_training = EducationGroupTypeFactory(category=education_group_categories.TRAINING)
-        cls.type_minitraining = EducationGroupTypeFactory(category=education_group_categories.MINI_TRAINING)
-        cls.type_group = EducationGroupTypeFactory(category=education_group_categories.GROUP)
 
         oph_entity = EntityFactory()
         envi_entity = EntityFactory()
 
-        cls.education_group_edph2 = EducationGroupYearFactory(
+        cls.education_group_edph2 = GroupFactory(
             acronym='EDPH2', academic_year=cls.current_academic_year,
             partial_acronym='EDPH2_SCS',
             education_group__start_year=cls.previous_academic_year,
-            education_group_type=cls.type_group,
             management_entity=envi_entity,
             title=TITLE_EDPH2
         )
-        cls.education_group_edph3 = EducationGroupYearFactory(
+        cls.education_group_edph3 = TrainingFactory(
             acronym='EDPH3', academic_year=cls.current_academic_year,
             partial_acronym='EDPH3_SCS',
             education_group__start_year=cls.previous_academic_year,
-            education_group_type=cls.type_training,
             management_entity=envi_entity,
             title=TITLE_EDPH3
         )
 
-        cls.education_group_arke2a = EducationGroupYearFactory(
+        cls.education_group_arke2a = TrainingFactory(
             acronym='ARKE2A', academic_year=cls.current_academic_year,
             education_group__start_year=cls.previous_academic_year,
-            education_group_type=cls.type_training,
             management_entity=oph_entity
         )
 
-        cls.education_group_hist2a = EducationGroupYearFactory(
+        cls.education_group_hist2a = GroupFactory(
             acronym='HIST2A', academic_year=cls.current_academic_year,
             education_group__start_year=cls.previous_academic_year,
-            education_group_type=cls.type_group,
-            management_entity=oph_entity
+            management_entity=oph_entity,
+            education_group_type__name=cls.education_group_edph2.education_group_type.name
         )
 
-        cls.education_group_arke2a_previous_year = EducationGroupYearFactory(
+        cls.education_group_arke2a_previous_year = TrainingFactory(
             acronym='ARKE2A',
             academic_year=cls.previous_academic_year,
             education_group__start_year=cls.previous_academic_year,
-            education_group_type=cls.type_training,
             management_entity=oph_entity
         )
 
         cls.oph_entity_v = EntityVersionFactory(entity=oph_entity, parent=envi_entity, end_date=None)
         cls.envi_entity_v = EntityVersionFactory(entity=envi_entity, end_date=None)
 
-        cls.user = PersonFactory().user
-        cls.user.user_permissions.add(Permission.objects.get(codename="can_access_education_group"))
+        cls.user = PersonWithPermissionsFactory("can_access_education_group").user
         cls.form_class = EducationGroupFilter()._meta.form
         cls.url = reverse("education_groups")
 
@@ -174,7 +162,7 @@ class TestEducationGroupDataSearchFilter(TestCase):
     def test_get_request(self):
         response = self.client.get(self.url, data={})
 
-        self.assertTemplateUsed(response, "education_group/search.html")
+        self.assertTemplateUsed(response, EDUCATION_GROUP_SEARCH_TEMPLATE)
 
         context = response.context
         self.assertIsInstance(context["form"], self.form_class)
@@ -183,7 +171,7 @@ class TestEducationGroupDataSearchFilter(TestCase):
     def test_without_get_data(self):
         response = self.client.get(self.url)
 
-        self.assertTemplateUsed(response, "education_group/search.html")
+        self.assertTemplateUsed(response, EDUCATION_GROUP_SEARCH_TEMPLATE)
 
         context = response.context
         self.assertIsInstance(context["form"], self.form_class)
@@ -199,7 +187,7 @@ class TestEducationGroupDataSearchFilter(TestCase):
     def test_with_empty_search_result(self):
         response = self.client.get(self.url, data={"category": education_group_categories.MINI_TRAINING})
 
-        self.assertTemplateUsed(response, "education_group/search.html")
+        self.assertTemplateUsed(response, EDUCATION_GROUP_SEARCH_TEMPLATE)
 
         context = response.context
         self.assertIsInstance(context["form"], self.form_class)
@@ -216,7 +204,7 @@ class TestEducationGroupDataSearchFilter(TestCase):
         for search_string in search_strings:
             response = self.client.get(self.url, data={"acronym": search_string})
 
-            self.assertTemplateUsed(response, "education_group/search.html")
+            self.assertTemplateUsed(response, EDUCATION_GROUP_SEARCH_TEMPLATE)
 
             context = response.context
             self.assertIsInstance(context["form"], self.form_class)
@@ -236,7 +224,7 @@ class TestEducationGroupDataSearchFilter(TestCase):
         for idx, search_string in enumerate(search_strings):
             response = self.client.get(self.url, data={"acronym": search_string})
 
-            self.assertTemplateUsed(response, "education_group/search.html")
+            self.assertTemplateUsed(response, EDUCATION_GROUP_SEARCH_TEMPLATE)
 
             context = response.context
             self.assertIsInstance(context["form"], self.form_class)
@@ -246,7 +234,7 @@ class TestEducationGroupDataSearchFilter(TestCase):
     def test_search_with_academic_year_only(self):
         response = self.client.get(self.url, data={"academic_year": self.current_academic_year.id})
 
-        self.assertTemplateUsed(response, "education_group/search.html")
+        self.assertTemplateUsed(response, EDUCATION_GROUP_SEARCH_TEMPLATE)
 
         context = response.context
         self.assertIsInstance(context["form"], self.form_class)
@@ -263,7 +251,7 @@ class TestEducationGroupDataSearchFilter(TestCase):
         for search_string in search_strings:
             response = self.client.get(self.url, data={"partial_acronym": search_string})
 
-            self.assertTemplateUsed(response, "education_group/search.html")
+            self.assertTemplateUsed(response, EDUCATION_GROUP_SEARCH_TEMPLATE)
 
             context = response.context
             self.assertIsInstance(context["form"], self.form_class)
@@ -281,7 +269,7 @@ class TestEducationGroupDataSearchFilter(TestCase):
         for idx, search_string in enumerate(search_strings):
             response = self.client.get(self.url, data={"partial_acronym": search_string})
 
-            self.assertTemplateUsed(response, "education_group/search.html")
+            self.assertTemplateUsed(response, EDUCATION_GROUP_SEARCH_TEMPLATE)
 
             context = response.context
             self.assertIsInstance(context["form"], self.form_class)
@@ -297,7 +285,7 @@ class TestEducationGroupDataSearchFilter(TestCase):
         for search_string in search_strings:
             response = self.client.get(self.url, data={"title": search_string})
 
-            self.assertTemplateUsed(response, "education_group/search.html")
+            self.assertTemplateUsed(response, EDUCATION_GROUP_SEARCH_TEMPLATE)
 
             context = response.context
             self.assertIsInstance(context["form"], self.form_class)
@@ -321,7 +309,7 @@ class TestEducationGroupDataSearchFilter(TestCase):
         for idx, search_string in enumerate(search_strings):
             response = self.client.get(self.url, data={"title": search_string})
 
-            self.assertTemplateUsed(response, "education_group/search.html")
+            self.assertTemplateUsed(response, EDUCATION_GROUP_SEARCH_TEMPLATE)
 
             context = response.context
             self.assertIsInstance(context["form"], self.form_class)
@@ -331,7 +319,7 @@ class TestEducationGroupDataSearchFilter(TestCase):
     def test_search_with_management_entity(self):
         response = self.client.get(self.url, data={"management_entity": self.oph_entity_v.acronym})
 
-        self.assertTemplateUsed(response, "education_group/search.html")
+        self.assertTemplateUsed(response, EDUCATION_GROUP_SEARCH_TEMPLATE)
 
         context = response.context
         self.assertIsInstance(context["form"], self.form_class)
@@ -348,7 +336,7 @@ class TestEducationGroupDataSearchFilter(TestCase):
             }
         )
 
-        self.assertTemplateUsed(response, "education_group/search.html")
+        self.assertTemplateUsed(response, EDUCATION_GROUP_SEARCH_TEMPLATE)
 
         context = response.context
         self.assertIsInstance(context["form"], self.form_class)
@@ -364,10 +352,11 @@ class TestEducationGroupDataSearchFilter(TestCase):
         )
 
     def test_search_by_education_group_type(self):
-        response = self.client.get(self.url,
-                                   data={"education_group_type": self.type_group.id})
+        response = self.client.get(self.url, data={
+            "education_group_type": self.education_group_hist2a.education_group_type.id
+        })
 
-        self.assertTemplateUsed(response, "education_group/search.html")
+        self.assertTemplateUsed(response, EDUCATION_GROUP_SEARCH_TEMPLATE)
 
         context = response.context
         self.assertIsInstance(context["form"], self.form_class)
@@ -377,7 +366,7 @@ class TestEducationGroupDataSearchFilter(TestCase):
         response = self.client.get(self.url,
                                    data={"category": education_group_categories.TRAINING})
 
-        self.assertTemplateUsed(response, "education_group/search.html")
+        self.assertTemplateUsed(response, EDUCATION_GROUP_SEARCH_TEMPLATE)
 
         context = response.context
         self.assertIsInstance(context["form"], self.form_class)
@@ -395,7 +384,7 @@ class TestEducationGroupDataSearchFilter(TestCase):
             }
         )
 
-        self.assertTemplateUsed(response, "education_group/search.html")
+        self.assertTemplateUsed(response, EDUCATION_GROUP_SEARCH_TEMPLATE)
 
         context = response.context
         self.assertIsInstance(context["form"], self.form_class)

@@ -23,37 +23,33 @@
 #    see http://www.gnu.org/licenses/.
 #
 ##############################################################################
-import datetime
-import urllib
 from http import HTTPStatus
 from unittest import mock
 
 import reversion
 from django.contrib.auth.models import Group
-from django.contrib.auth.models import Permission
-from django.http import HttpResponseNotFound, HttpResponseForbidden, HttpResponseRedirect, QueryDict
+from django.http import HttpResponseNotFound, HttpResponseForbidden, HttpResponseRedirect
 from django.test import TestCase
 from django.urls import reverse
 
 from base.models.academic_year import AcademicYear
 from base.models.enums import education_group_categories
-from base.models.enums.education_group_categories import TRAINING
 from base.models.enums.education_group_types import TrainingType, GroupType
 from base.models.enums.groups import CENTRAL_MANAGER_GROUP
-from base.tests.factories.academic_year import AcademicYearFactory, create_current_academic_year
+from base.tests.factories.academic_year import AcademicYearFactory
 from base.tests.factories.certificate_aim import CertificateAimFactory
 from base.tests.factories.education_group_certificate_aim import EducationGroupCertificateAimFactory
 from base.tests.factories.education_group_language import EducationGroupLanguageFactory
 from base.tests.factories.education_group_organization import EducationGroupOrganizationFactory
 from base.tests.factories.education_group_type import GroupEducationGroupTypeFactory, \
-    MiniTrainingEducationGroupTypeFactory, EducationGroupTypeFactory
+    MiniTrainingEducationGroupTypeFactory
 from base.tests.factories.education_group_year import EducationGroupYearFactory, TrainingFactory, GroupFactory, \
-    MiniTrainingFactory, EducationGroupYearCommonFactory, EducationGroupYearCommonAgregationFactory
-from base.tests.factories.group import CentralManagerGroupFactory
+    MiniTrainingFactory, EducationGroupYearCommonFactory, EducationGroupYearCommonAgregationFactory, \
+    EducationGroupYearMasterFactory
 from base.tests.factories.group_element_year import GroupElementYearFactory
 from base.tests.factories.learning_component_year import LearningComponentYearFactory
 from base.tests.factories.learning_unit_year import LearningUnitYearFactory
-from base.tests.factories.person import PersonFactory, PersonWithPermissionsFactory
+from base.tests.factories.person import PersonWithPermissionsFactory
 from base.tests.factories.person_entity import PersonEntityFactory
 from base.tests.factories.user import UserFactory
 from base.utils.cache import ElementCache
@@ -78,6 +74,7 @@ class EducationGroupRead(TestCase):
 
         cls.user = PersonWithPermissionsFactory("can_access_education_group").user
         cls.url = reverse("education_group_read", args=[cls.education_group_parent.id, cls.education_group_child_1.id])
+        cls.template_name = "education_group/tab_identification.html"
 
     def setUp(self):
         self.client.force_login(self.user)
@@ -99,7 +96,7 @@ class EducationGroupRead(TestCase):
     def test_without_get_data(self):
         response = self.client.get(self.url)
 
-        self.assertTemplateUsed(response, "education_group/tab_identification.html")
+        self.assertTemplateUsed(response, self.template_name)
 
         context = response.context
         self.assertEqual(context["education_group_year"], self.education_group_child_1)
@@ -118,7 +115,7 @@ class EducationGroupRead(TestCase):
     def test_with_root_set(self):
         response = self.client.get(self.url, data={"root": self.education_group_parent.id})
 
-        self.assertTemplateUsed(response, "education_group/tab_identification.html")
+        self.assertTemplateUsed(response, self.template_name)
 
         context = response.context
         self.assertEqual(context["education_group_year"], self.education_group_child_1)
@@ -143,7 +140,7 @@ class EducationGroupRead(TestCase):
     def test_with_root_set_as_current_education_group_year(self):
         response = self.client.get(self.url, data={"root": self.education_group_child_1.id})
 
-        self.assertTemplateUsed(response, "education_group/tab_identification.html")
+        self.assertTemplateUsed(response, self.template_name)
 
         context = response.context
         self.assertEqual(context["education_group_year"], self.education_group_child_1)
@@ -158,7 +155,7 @@ class EducationGroupRead(TestCase):
         url = reverse("education_group_read", args=[self.education_group_parent.pk, self.education_group_child_2.id])
         response = self.client.get(url)
 
-        self.assertTemplateUsed(response, "education_group/tab_identification.html")
+        self.assertTemplateUsed(response, self.template_name)
 
         context = response.context
         self.assertEqual(context["education_group_year"], self.education_group_child_2)
@@ -190,13 +187,11 @@ class EducationGroupRead(TestCase):
 class TestReadEducationGroup(TestCase):
     @classmethod
     def setUpTestData(cls):
-        cls.user = UserFactory()
-        CentralManagerGroupFactory()
-        cls.person = PersonWithPermissionsFactory('can_access_education_group', user=cls.user)
+        cls.person = PersonWithPermissionsFactory('can_access_education_group', groups=[CENTRAL_MANAGER_GROUP])
         cls.academic_year = AcademicYearFactory(current=True)
 
     def setUp(self):
-        self.client.force_login(self.user)
+        self.client.force_login(self.person.user)
 
     def test_training_template_used(self):
         training = TrainingFactory()
@@ -223,43 +218,31 @@ class TestReadEducationGroup(TestCase):
         self.assertTemplateUsed(response, expected_template)
 
     def test_show_coorganization_case_not_2m(self):
-        training_not_2m = EducationGroupYearFactory(
-            education_group_type__category=TRAINING,
-            education_group_type__name=TrainingType.CAPAES.name
-        )
+        training_not_2m = TrainingFactory(education_group_type__name=TrainingType.CAPAES.name)
         url = reverse("education_group_read", args=[training_not_2m.pk, training_not_2m.pk])
 
         response = self.client.get(url)
         self.assertTrue(response.context['show_coorganization'])
 
     def test_show_coorganization_case_2m(self):
-        training_2m = EducationGroupYearFactory(
-            education_group_type__category=TRAINING,
-            education_group_type__name=TrainingType.PGRM_MASTER_120.name
-        )
+        training_2m = EducationGroupYearMasterFactory()
         url = reverse("education_group_read", args=[training_2m.pk, training_2m.pk])
 
         response = self.client.get(url)
         self.assertFalse(response.context['show_coorganization'])
 
     def test_show_and_edit_coorganization(self):
-        user = UserFactory()
-        person = PersonFactory(user=user)
-        user.user_permissions.add(Permission.objects.get(codename="can_access_education_group"))
-        person.user.user_permissions.add(Permission.objects.get(codename='change_educationgroup'))
-        training_not_2m = EducationGroupYearFactory(
-            education_group_type__category=TRAINING,
-            education_group_type__name=TrainingType.CAPAES.name
-        )
+        person = PersonWithPermissionsFactory("can_access_education_group", 'change_educationgroup')
+        training_not_2m = TrainingFactory(education_group_type__name=TrainingType.CAPAES.name)
         PersonEntityFactory(person=person, entity=training_not_2m.management_entity)
         url = reverse("education_group_read", args=[training_not_2m.pk, training_not_2m.pk])
-        self.client.force_login(user)
+        self.client.force_login(person.user)
 
         response = self.client.get(url)
         self.assertTrue(response.context['show_coorganization'])
         self.assertFalse(response.context['can_change_coorganization'])
 
-        user.groups.add(Group.objects.get(name=CENTRAL_MANAGER_GROUP))
+        person.user.groups.add(Group.objects.get(name=CENTRAL_MANAGER_GROUP))
 
         response = self.client.get(url)
         self.assertTrue(response.context['show_coorganization'])
@@ -281,8 +264,6 @@ class TestReadEducationGroup(TestCase):
 
     def test_fetching_starting_academic_year(self):
         current_academic_year = self.academic_year
-        today = datetime.date.today()
-        today.replace(year=current_academic_year.year - 1)
         starting_academic_year, created = AcademicYear.objects.update_or_create(
             year=current_academic_year.year - 1,
             defaults={
@@ -298,10 +279,7 @@ class TestReadEducationGroup(TestCase):
         self.assertEqual(response.context["current_academic_year"], current_academic_year)
 
     def test_main_common_show_only_identification_and_general_information(self):
-        main_common = EducationGroupYearCommonFactory(
-            academic_year=self.academic_year,
-            education_group_type=EducationGroupTypeFactory(name=TrainingType.BACHELOR.name)
-        )
+        main_common = EducationGroupYearCommonFactory(academic_year=self.academic_year)
         url = reverse("education_group_read", args=[main_common.pk, main_common.pk])
 
         response = self.client.get(url)
@@ -316,9 +294,7 @@ class TestReadEducationGroup(TestCase):
         self.assertFalse(response.context['show_admission_conditions'])
 
     def test_common_not_main_show_only_identification_and_admission_condition(self):
-        agregation_common = EducationGroupYearCommonAgregationFactory(
-            academic_year=self.academic_year
-        )
+        agregation_common = EducationGroupYearCommonAgregationFactory(academic_year=self.academic_year)
 
         url = reverse("education_group_read", args=[agregation_common.pk, agregation_common.pk])
 
@@ -334,9 +310,7 @@ class TestReadEducationGroup(TestCase):
         self.assertFalse(response.context['show_general_information'])
 
     def test_not_show_general_info_and_admission_condition_and_achievement_for_n_plus_2(self):
-        edy = EducationGroupYearFactory(
-            academic_year=AcademicYearFactory(year=self.academic_year.year + 2),
-        )
+        edy = EducationGroupYearFactory(academic_year=AcademicYearFactory(year=self.academic_year.year + 2))
 
         url = reverse("education_group_read", args=[edy.pk, edy.pk])
 
@@ -346,9 +320,7 @@ class TestReadEducationGroup(TestCase):
         self.assertFalse(response.context['show_skills_and_achievements'])
 
     def test_not_show_general_info_and_admission_condition_and_achievement_for_year_smaller_than_2017(self):
-        edy = EducationGroupYearFactory(
-            academic_year=AcademicYearFactory(year=2016),
-        )
+        edy = EducationGroupYearFactory(academic_year=AcademicYearFactory(year=2016))
 
         url = reverse("education_group_read", args=[edy.pk, edy.pk])
 
@@ -358,11 +330,9 @@ class TestReadEducationGroup(TestCase):
         self.assertFalse(response.context['show_skills_and_achievements'])
 
     def test_not_show_general_info_for_group_which_are_not_common_core(self):
-        group_type = GroupEducationGroupTypeFactory(name=GroupType.SUB_GROUP.name)
-
-        group = EducationGroupYearFactory(
+        group = GroupFactory(
             academic_year=self.academic_year,
-            education_group_type=group_type,
+            education_group_type__name=GroupType.SUB_GROUP.name,
         )
         url = reverse("education_group_read", args=[group.pk, group.pk])
         response = self.client.get(url)
@@ -370,11 +340,9 @@ class TestReadEducationGroup(TestCase):
         self.assertFalse(response.context['show_general_information'])
 
     def test_show_general_info_for_group_which_are_common_core(self):
-        common_type = GroupEducationGroupTypeFactory(name=GroupType.COMMON_CORE.name)
-
-        group = EducationGroupYearFactory(
+        group = GroupFactory(
             academic_year=self.academic_year,
-            education_group_type=common_type,
+            education_group_type__name=GroupType.COMMON_CORE.name,
         )
         url = reverse("education_group_read", args=[group.pk, group.pk])
         response = self.client.get(url)
@@ -385,12 +353,9 @@ class TestReadEducationGroup(TestCase):
 class EducationGroupDiplomas(TestCase):
     @classmethod
     def setUpTestData(cls):
-        academic_year = create_current_academic_year()
-        type_training = EducationGroupTypeFactory(category=education_group_categories.TRAINING)
-        cls.education_group_parent = EducationGroupYearFactory(acronym="Parent", academic_year=academic_year,
-                                                               education_group_type=type_training)
-        cls.education_group_child = EducationGroupYearFactory(acronym="Child_1", academic_year=academic_year,
-                                                              education_group_type=type_training)
+        academic_year = AcademicYearFactory(current=True)
+        cls.education_group_parent = TrainingFactory(acronym="Parent", academic_year=academic_year)
+        cls.education_group_child = TrainingFactory(acronym="Child_1", academic_year=academic_year)
         GroupElementYearFactory(parent=cls.education_group_parent, child_branch=cls.education_group_child)
         cls.user = UserFactory()
         cls.person = PersonWithPermissionsFactory('can_access_education_group', user=cls.user)
@@ -571,7 +536,7 @@ class TestUtilizationTab(TestCase):
 class TestContent(TestCase):
     @classmethod
     def setUpTestData(cls):
-        cls.current_academic_year = create_current_academic_year()
+        cls.current_academic_year = AcademicYearFactory(current=True)
         cls.education_group_year_1 = EducationGroupYearFactory(academic_year=cls.current_academic_year)
         cls.education_group_year_2 = EducationGroupYearFactory(academic_year=cls.current_academic_year)
         cls.education_group_year_3 = EducationGroupYearFactory(academic_year=cls.current_academic_year)

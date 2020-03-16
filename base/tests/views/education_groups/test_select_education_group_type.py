@@ -32,7 +32,7 @@ from django.utils.translation import gettext_lazy as _
 from waffle.testutils import override_flag
 
 from base.models.enums import education_group_categories
-from base.tests.factories.academic_year import AcademicYearFactory, create_current_academic_year
+from base.tests.factories.academic_year import AcademicYearFactory
 from base.tests.factories.authorized_relationship import AuthorizedRelationshipFactory
 from base.tests.factories.education_group_type import EducationGroupTypeFactory
 from base.tests.factories.education_group_year import EducationGroupYearFactory
@@ -44,8 +44,7 @@ from base.tests.factories.person import PersonFactory
 class TestSelectEducationGroupTypeView(TestCase):
     @classmethod
     def setUpTestData(cls):
-        cls.academic_year = AcademicYearFactory()
-        create_current_academic_year()
+        cls.academic_year = AcademicYearFactory(current=True)
         cls.parent_education_group_year = EducationGroupYearFactory(academic_year=cls.academic_year)
 
         cls.test_categories = [
