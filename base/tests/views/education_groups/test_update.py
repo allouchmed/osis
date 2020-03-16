@@ -1179,7 +1179,7 @@ class TestCertificateAimView(TestCase):
             "root_id": self.training.pk,
             "education_group_year_id": self.training.pk
         })
-        self.client.force_login(user=self.program_manager.person.user)
+        self.client.force_login(user=self.program_manager.user)
 
     def test_user_not_logged(self):
         self.client.logout()
