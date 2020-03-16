@@ -37,6 +37,7 @@ from base.models.entity_version import EntityVersion
 from base.models.enums import learning_unit_year_subtypes, learning_container_year_types, organization_type, \
     learning_unit_year_periodicity
 from base.models.enums.component_type import DEFAULT_ACRONYM_COMPONENT
+from base.models.enums.groups import FACULTY_MANAGER_GROUP, CENTRAL_MANAGER_GROUP
 from base.models.enums.internship_subtypes import TEACHING_INTERNSHIP
 from base.models.enums.learning_component_year_type import LECTURING, PRACTICAL_EXERCISES
 from base.models.enums.learning_container_year_types import INTERNSHIP, LearningContainerYearType
@@ -54,13 +55,12 @@ from base.tests.factories.business.learning_units import GenerateContainer, Gene
 from base.tests.factories.campus import CampusFactory
 from base.tests.factories.entity import EntityFactory
 from base.tests.factories.entity_version import EntityVersionFactory
-from base.tests.factories.group import FacultyManagerGroupFactory, CentralManagerGroupFactory
 from base.tests.factories.learning_container import LearningContainerFactory
 from base.tests.factories.learning_container_year import LearningContainerYearFactory
 from base.tests.factories.learning_unit import LearningUnitFactory
 from base.tests.factories.learning_unit_year import LearningUnitYearFactory
 from base.tests.factories.organization import OrganizationFactory
-from base.tests.factories.person import PersonFactory
+from base.tests.factories.person import PersonFactory, PersonWithPermissionsFactory
 from base.tests.factories.person_entity import PersonEntityFactory
 from reference.tests.factories.language import LanguageFactory
 
@@ -161,6 +161,7 @@ def get_valid_form_data(academic_year, person, learning_unit_year=None):
 
 class LearningUnitFullFormContextMixin(TestCase):
     """This mixin is used in this test file in order to setup an environment for testing FULL FORM"""
+
     @classmethod
     def setUpTestData(cls):
         cls.initial_language = LanguageFactory(code='FR')
@@ -172,6 +173,8 @@ class LearningUnitFullFormContextMixin(TestCase):
         start_year = AcademicYearFactory(year=cls.current_academic_year.year - 3)
         end_year = AcademicYearFactory(year=cls.current_academic_year.year + 7)
         cls.acs = GenerateAcademicYear(start_year=start_year, end_year=end_year).academic_years
+        cls.central_manager = PersonWithPermissionsFactory(groups=[CENTRAL_MANAGER_GROUP])
+        cls.faculty_manager = PersonWithPermissionsFactory(groups=[FACULTY_MANAGER_GROUP])
 
     def setUp(self):
         self.learning_unit_year = LearningUnitYear.objects.get(
@@ -194,8 +197,7 @@ class TestFullFormInit(LearningUnitFullFormContextMixin):
             FullForm(self.person, self.learning_unit_year.academic_year, post_data=self.post_data)
 
     def test_disable_fields_full_with_faculty_manager(self):
-        self.person.user.groups.add(FacultyManagerGroupFactory())
-        form = FullForm(self.person, self.learning_unit_year.academic_year,
+        form = FullForm(self.faculty_manager, self.learning_unit_year.academic_year,
                         learning_unit_instance=self.learning_unit_year.learning_unit)
         disabled_fields = {key for key, value in form.fields.items() if value.disabled}
         self.assertTrue(FACULTY_OPEN_FIELDS not in disabled_fields)
@@ -207,9 +209,8 @@ class TestFullFormInit(LearningUnitFullFormContextMixin):
         self.assertTrue(form.fields['container_type'].disabled)
 
     def test_disable_fields_full_proposal_with_faculty_manager(self):
-        self.person.user.groups.add(FacultyManagerGroupFactory())
         form = FullForm(
-            self.person,
+            self.faculty_manager,
             self.learning_unit_year.academic_year,
             learning_unit_instance=self.learning_unit_year.learning_unit,
             proposal=True
@@ -253,20 +254,21 @@ class TestFullFormInit(LearningUnitFullFormContextMixin):
             self.assertEqual(full_form.forms[form_class].initial, initial)
 
     def test_model_forms_case_update(self):
-        learn_unit_year = self.learning_unit_year
         form = _instanciate_form(self.learning_unit_year.academic_year,
                                  post_data=self.post_data, person=self.person,
-                                 learning_unit_instance=learn_unit_year.learning_unit)
+                                 learning_unit_instance=self.learning_unit_year.learning_unit)
 
-        self.assertEqual(form.forms[LearningUnitModelForm].instance, learn_unit_year.learning_unit)
+        self.assertEqual(form.forms[LearningUnitModelForm].instance, self.learning_unit_year.learning_unit)
         self.assertEqual(form.forms[LearningContainerModelForm].instance,
-                         learn_unit_year.learning_container_year.learning_container)
-        self.assertEqual(form.forms[LearningUnitYearModelForm].instance, learn_unit_year)
-        self.assertEqual(form.forms[LearningContainerYearModelForm].instance, learn_unit_year.learning_container_year)
+                         self.learning_unit_year.learning_container_year.learning_container)
+        self.assertEqual(form.forms[LearningUnitYearModelForm].instance, self.learning_unit_year)
+        self.assertEqual(
+            form.forms[LearningContainerYearModelForm].instance,
+            self.learning_unit_year.learning_container_year
+        )
 
     def test_academic_years_restriction_for_central_manager(self):
-        self.person.user.groups.add(CentralManagerGroupFactory())
-        form = FullForm(self.person, self.learning_unit_year.academic_year,
+        form = FullForm(self.central_manager, self.learning_unit_year.academic_year,
                         start_year=self.learning_unit_year.academic_year.year,
                         postposal=True)
         actual_choices = [choice[0] for choice in form.fields["academic_year"].choices if choice[0] != '']
@@ -275,8 +277,7 @@ class TestFullFormInit(LearningUnitFullFormContextMixin):
         self.assertCountEqual(actual_choices, expected_choices)
 
     def test_academic_years_restriction_for_faculty_manager(self):
-        self.person.user.groups.add(FacultyManagerGroupFactory())
-        form = FullForm(self.person, self.learning_unit_year.academic_year,
+        form = FullForm(self.faculty_manager, self.learning_unit_year.academic_year,
                         start_year=self.learning_unit_year.academic_year.year,
                         postposal=True)
         actual_choices = [choice[0] for choice in form.fields["academic_year"].choices if choice[0] != '']
@@ -284,27 +285,24 @@ class TestFullFormInit(LearningUnitFullFormContextMixin):
         self.assertCountEqual(actual_choices, expected_choices)
 
     def test_disable_fields_full_with_faculty_manager_and_central_manager(self):
-        self.person.user.groups.add(FacultyManagerGroupFactory())
-        self.person.user.groups.add(CentralManagerGroupFactory())
-        form = FullForm(self.person, self.learning_unit_year.academic_year,
+        both_manager = PersonWithPermissionsFactory(groups=[CENTRAL_MANAGER_GROUP, FACULTY_MANAGER_GROUP])
+        form = FullForm(both_manager, self.learning_unit_year.academic_year,
                         learning_unit_instance=self.learning_unit_year.learning_unit)
         disabled_fields = {key for key, value in form.fields.items() if value.disabled}
         self.assertEqual(disabled_fields, FULL_READ_ONLY_FIELDS.union({'internship_subtype'}))
 
     def test_disable_fields_acronym_with_central_manager_and_other_collective(self):
-        self.person.user.groups.add(CentralManagerGroupFactory())
         self.learning_unit_year.learning_container_year.container_type = LearningContainerYearType.OTHER_COLLECTIVE.name
         self.learning_unit_year.learning_container_year.save()
-        form = FullForm(self.person, self.learning_unit_year.academic_year,
+        form = FullForm(self.central_manager, self.learning_unit_year.academic_year,
                         learning_unit_instance=self.learning_unit_year.learning_unit)
         disabled_fields = {key for key, value in form.fields.items() if value.disabled}
         self.assertTrue("acronym" not in disabled_fields)
 
     def test_disable_fields_acronym_with_faculty_manager_and_other_collective(self):
-        self.person.user.groups.add(FacultyManagerGroupFactory())
         self.learning_unit_year.learning_container_year.container_type = LearningContainerYearType.OTHER_COLLECTIVE.name
         self.learning_unit_year.learning_container_year.save()
-        form = FullForm(self.person, self.learning_unit_year.academic_year,
+        form = FullForm(self.faculty_manager, self.learning_unit_year.academic_year,
                         learning_unit_instance=self.learning_unit_year.learning_unit)
         disabled_fields = {key for key, value in form.fields.items() if value.disabled}
         self.assertTrue("acronym" not in disabled_fields)
@@ -353,16 +351,6 @@ class TestFullFormIsValid(LearningUnitFullFormContextMixin):
                                  start_year=self.current_academic_year.year)
         self.assertFalse(form.is_valid())
 
-    def test_creation_case_wrong_learning_unit_year_data(self):
-        form = _instanciate_form(self.current_academic_year, post_data=self.post_data,
-                                 start_year=self.current_academic_year.year)
-        self.assertFalse(form.is_valid())
-
-    def test_creation_case_wrong_learning_container_year_data(self):
-        form = _instanciate_form(self.current_academic_year, post_data=self.post_data,
-                                 start_year=self.current_academic_year.year)
-        self.assertFalse(form.is_valid())
-
     def test_creation_case_not_same_entities_container(self):
         entity_version = EntityVersionFactory(end_date=None)
         # Set another requirement entity
@@ -399,16 +387,6 @@ class TestFullFormIsValid(LearningUnitFullFormContextMixin):
         self.assertTrue(form.is_valid(), form.errors)
 
     def test_update_case_wrong_learning_unit_data(self):
-        form = _instanciate_form(self.learning_unit_year.academic_year, post_data=self.post_data,
-                                 learning_unit_instance=self.learning_unit_year.learning_unit)
-        self.assertFalse(form.is_valid())
-
-    def test_update_case_wrong_learning_unit_year_data(self):
-        form = _instanciate_form(self.learning_unit_year.academic_year, post_data=self.post_data,
-                                 learning_unit_instance=self.learning_unit_year.learning_unit)
-        self.assertFalse(form.is_valid())
-
-    def test_update_case_wrong_learning_container_year_data(self):
         form = _instanciate_form(self.learning_unit_year.academic_year, post_data=self.post_data,
                                  learning_unit_instance=self.learning_unit_year.learning_unit)
         self.assertFalse(form.is_valid())
@@ -531,9 +509,8 @@ class TestFullFormSave(LearningUnitFullFormContextMixin):
 
     def test_when_create_instance(self):
         initial_counts = self._get_initial_counts()
-        acronym = 'LAGRO1200'
         new_learning_unit_year = LearningUnitYearFactory.build(
-            acronym=acronym,
+            acronym='LAGRO1200',
             academic_year=self.current_academic_year,
             subtype=learning_unit_year_subtypes.FULL,
             language=self.initial_language,
@@ -636,28 +613,36 @@ class TestFullFormSave(LearningUnitFullFormContextMixin):
 class TestFullFormValidateSameEntitiesContainer(LearningUnitFullFormContextMixin):
     """Unit tests for FullForm._validate_same_entities_container()"""
 
+    def setUp(self):
+        super().setUp()
+        self.container_year = LearningContainerYearFactory.build(academic_year=self.current_academic_year)
+        learning_unit_year = LearningUnitYearFactory.build(academic_year=self.current_academic_year,
+                                                           learning_container_year=self.container_year,
+                                                           subtype=learning_unit_year_subtypes.FULL)
+        self.post_data_local = get_valid_form_data(self.current_academic_year, person=self.person,
+                                                   learning_unit_year=learning_unit_year)
+        self.post_data_local['allocation_entity-entity'] = EntityVersionFactory().id
+
     def test_when_same_entities_container(self):
         form = _instanciate_form(self.current_academic_year, post_data=self.post_data, person=self.person,
                                  start_year=self.current_academic_year.year)
         self.assertTrue(form.is_valid(), form.errors)
 
     def test_when_not_same_entities_container_case_container_type_master_thesis(self):
-        post_data = self._get_post_data_with_different_entities_container_year(
-            learning_container_year_types.MASTER_THESIS)
-        form = _instanciate_form(self.current_academic_year, post_data=post_data,
+        self.post_data_local['container_type'] = learning_container_year_types.MASTER_THESIS
+        form = _instanciate_form(self.current_academic_year, post_data=self.post_data_local,
                                  start_year=self.current_academic_year.year)
         self.assertFalse(form.is_valid())
 
     def test_when_not_same_entities_container_case_container_type_internship(self):
-        post_data = self._get_post_data_with_different_entities_container_year(learning_container_year_types.INTERNSHIP)
-        form = _instanciate_form(self.current_academic_year, post_data=post_data, person=self.person,
+        self.post_data_local['container_type'] = learning_container_year_types.INTERNSHIP
+        form = _instanciate_form(self.current_academic_year, post_data=self.post_data_local, person=self.person,
                                  start_year=self.current_academic_year.year)
         self.assertFalse(form.is_valid())
 
     def test_when_not_same_entities_container_case_container_type_dissertation(self):
-        post_data = self._get_post_data_with_different_entities_container_year(
-            learning_container_year_types.DISSERTATION)
-        form = _instanciate_form(self.current_academic_year, post_data=post_data, person=self.person,
+        self.post_data_local['container_type'] = learning_container_year_types.DISSERTATION
+        form = _instanciate_form(self.current_academic_year, post_data=self.post_data_local, person=self.person,
                                  start_year=self.current_academic_year.year)
         self.assertFalse(form.is_valid())
 

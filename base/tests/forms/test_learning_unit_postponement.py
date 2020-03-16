@@ -26,7 +26,6 @@
 from collections import OrderedDict
 from unittest import mock
 
-from django.contrib.auth.models import Group
 from django.test import TestCase
 from django.utils.translation import gettext as _
 
@@ -36,16 +35,14 @@ from base.forms.learning_unit.learning_unit_partim import PartimForm
 from base.forms.learning_unit.learning_unit_postponement import LearningUnitPostponementForm, FIELDS_TO_NOT_POSTPONE
 from base.models.academic_year import AcademicYear
 from base.models.enums import learning_unit_year_subtypes
-from base.models.enums.groups import FACULTY_MANAGER_GROUP
 from base.models.enums.learning_component_year_type import LECTURING
 from base.models.learning_component_year import LearningComponentYear
 from base.models.learning_container_year import LearningContainerYear
 from base.models.learning_unit_year import LearningUnitYear
 from base.tests.factories.academic_year import create_current_academic_year, AcademicYearFactory
 from base.tests.factories.business.learning_units import GenerateContainer, GenerateAcademicYear
-from base.tests.factories.group import FacultyManagerGroupFactory
 from base.tests.factories.learning_unit_year import LearningUnitYearFactory
-from base.tests.factories.person import PersonFactory
+from base.tests.factories.person import PersonFactory, FacultyManagerFactory
 from base.tests.factories.person_entity import PersonEntityFactory
 from base.tests.factories.proposal_learning_unit import ProposalLearningUnitFactory
 
@@ -63,12 +60,10 @@ class LearningUnitPostponementFormContextMixin(TestCase):
         start_year = AcademicYearFactory(year=cls.current_academic_year.year + 1)
         end_year = AcademicYearFactory(year=cls.current_academic_year.year + 10)
         cls.generated_ac_years = GenerateAcademicYear(start_year, end_year)
-        FacultyManagerGroupFactory()
 
     def setUp(self):
-        end_year_6 = AcademicYearFactory(year=self.current_academic_year.year + 6)
         # Creation of a LearingContainerYear and all related models - FOR 6 years
-        self.learn_unit_structure = GenerateContainer(self.current_academic_year, end_year_6)
+        self.learn_unit_structure = GenerateContainer(self.current_academic_year, self.generated_ac_years[5])
         # Build in Generated Container [first index = start Generate Container ]
         self.generated_container_year = self.learn_unit_structure.generated_container_years[0]
 
@@ -147,7 +142,7 @@ class TestLearningUnitPostponementFormInit(LearningUnitPostponementFormContextMi
         self.assertEqual(len(form._forms_to_delete), 6)
 
     def test_forms_property_end_year_is_more_than_current_and_less_than_none(self):
-        end_year = AcademicYearFactory(year=self.current_academic_year.year + 2)
+        end_year = AcademicYear.objects.get(year=self.current_academic_year.year + 2)
         form = self._instantiate_postponement_forms(end_year=end_year)
         self.assertEqual(len(form._forms_to_upsert), 3)  # update the current + 2 inserts in the future
         self.assertEqual(len(form._forms_to_delete), 4)
@@ -174,8 +169,7 @@ class TestLearningUnitPostponementFormInit(LearningUnitPostponementFormContextMi
         self.assertEqual(len(form._forms_to_delete), 6)
 
     def test_update_proposal(self):
-        self.faculty_manager = PersonFactory()
-        self.faculty_manager.user.groups.add(Group.objects.get(name=FACULTY_MANAGER_GROUP))
+        self.faculty_manager = FacultyManagerFactory()
 
         next_learning_unit_year = LearningUnitYear.objects.get(
             learning_unit=self.learn_unit_structure.learning_unit_full,
@@ -330,14 +324,13 @@ class TestLearningUnitPostponementFormSave(LearningUnitPostponementFormContextMi
         self.assertEqual(mock_baseform_save.call_count, 7)
 
     def test_all_learning_unit_years_have_same_learning_unit(self):
-        data = self.instance_luy_base_form.data
-        data.update({
+        self.instance_luy_base_form.data.update({
             'acronym': 'LDROI1001',
             'acronym_0': 'L',
             'acronym_1': 'DROI1001'
         })
         form = _instanciate_postponement_form(self.person, self.learning_unit_year_full.academic_year,
-                                              data=data)
+                                              data=self.instance_luy_base_form.data)
         self.assertTrue(form.is_valid(), form.errors)
         learning_units = {learning_unit_year.learning_unit for learning_unit_year in form.save()}
         self.assertEqual(len(learning_units), 1)
@@ -346,27 +339,28 @@ class TestLearningUnitPostponementFormSave(LearningUnitPostponementFormContextMi
 class TestLearningUnitPostponementFormCheckConsistency(LearningUnitPostponementFormContextMixin):
     """Unit tests for LearningUnitPostponementForm._check_consistency()"""
 
+    def setUp(self):
+        super().setUp()
+        self.instance_luy_base_form = _instantiate_base_learning_unit_form(self.learning_unit_year_full, self.person)
+
     def test_when_insert_postponement(self):
-        instance_luy_base_form = _instantiate_base_learning_unit_form(self.learning_unit_year_full, self.person)
         form = _instanciate_postponement_form(self.person, self.learning_unit_year_full.academic_year,
-                                              data=instance_luy_base_form.data)
+                                              data=self.instance_luy_base_form.data)
         self.assertTrue(form._check_consistency())
 
     def test_when_end_postponement_updated_to_now(self):
         """Nothing to upsert in the future, only deletions."""
-        instance_luy_base_form = _instantiate_base_learning_unit_form(self.learning_unit_year_full, self.person)
         academic_year = self.learning_unit_year_full.academic_year
         form = _instanciate_postponement_form(self.person, academic_year,
-                                              learning_unit_instance=instance_luy_base_form.learning_unit_instance,
+                                              learning_unit_instance=self.instance_luy_base_form.learning_unit_instance,
                                               end_postponement=academic_year)
         self.assertTrue(form._check_consistency())
 
     def test_when_end_postponement_updated_to_next_year(self):
         """Only 1 upsert to perform (next year)."""
-        instance_luy_base_form = _instantiate_base_learning_unit_form(self.learning_unit_year_full, self.person)
         next_academic_year = AcademicYear.objects.get(year=self.learning_unit_year_full.academic_year.year + 1)
         form = _instanciate_postponement_form(self.person, next_academic_year,
-                                              learning_unit_instance=instance_luy_base_form.learning_unit_instance,
+                                              learning_unit_instance=self.instance_luy_base_form.learning_unit_instance,
                                               end_postponement=next_academic_year)
         self.assertTrue(form._check_consistency())
 
@@ -376,10 +370,9 @@ class TestLearningUnitPostponementFormCheckConsistency(LearningUnitPostponementF
         mock_find_consistency_errors.return_value = {
             self.learning_unit_year_full.academic_year: {'credits': {'current': 10, 'old': 15}}
         }
-        instance_luy_base_form = _instantiate_base_learning_unit_form(self.learning_unit_year_full, self.person)
         form = _instanciate_postponement_form(self.person, self.learning_unit_year_full.academic_year,
-                                              learning_unit_instance=instance_luy_base_form.learning_unit_instance,
-                                              data=instance_luy_base_form.data)
+                                              learning_unit_instance=self.instance_luy_base_form.learning_unit_instance,
+                                              data=self.instance_luy_base_form.data)
         self.assertFalse(form._check_consistency())
         mock_find_consistency_errors.assert_called_once_with()
 
@@ -395,6 +388,10 @@ class TestLearningUnitPostponementFormFindConsistencyErrors(LearningUnitPostpone
             self.learning_unit_year_full.academic_year,
             learning_unit_instance=self.instance_luy_base_form.learning_unit_instance,
             data=self.instance_luy_base_form.data
+        )
+        self.next_academic_year = AcademicYear.objects.get(year=self.learning_unit_year_full.academic_year.year + 1)
+        self.ALREADY_MODIFIED = _(
+            "%(col_name)s has been already modified. (%(new_value)s instead of %(current_value)s)"
         )
 
     def _change_credits_value(self, academic_year):
@@ -462,30 +459,28 @@ class TestLearningUnitPostponementFormFindConsistencyErrors(LearningUnitPostpone
 
     def test_when_difference_found_on_none_value(self):
         # Set specific title to 'None' for learning unit next academic year
-        next_academic_year = AcademicYear.objects.get(year=self.learning_unit_year_full.academic_year.year + 1)
-        LearningUnitYear.objects.filter(academic_year=next_academic_year,
+        LearningUnitYear.objects.filter(academic_year=self.next_academic_year,
                                         learning_unit=self.learning_unit_year_full.learning_unit) \
             .update(specific_title=None)
 
         self.assertTrue(self.form.is_valid())
         result = self.form.consistency_errors
         expected_result = OrderedDict({
-            next_academic_year: [
-                _("%(col_name)s has been already modified. (%(new_value)s instead of %(current_value)s)") % {
+            self.next_academic_year: [
+                self.ALREADY_MODIFIED % {
                     'col_name': _('Specific complement (Full)'),
                     'new_value': '-',
                     'current_value': self.instance_luy_base_form.data['specific_title']
                 }
             ]
         })
-        self.assertEqual(expected_result[next_academic_year], result[next_academic_year])
+        self.assertEqual(expected_result[self.next_academic_year], result[self.next_academic_year])
 
     def test_when_difference_found_on_boolean_field(self):
-        next_academic_year = AcademicYear.objects.get(year=self.learning_unit_year_full.academic_year.year + 1)
-        initial_status_value, new_status_value = self._change_status_value(next_academic_year)
+        initial_status_value, new_status_value = self._change_status_value(self.next_academic_year)
         expected_result = OrderedDict({
-            next_academic_year: [
-                _("%(col_name)s has been already modified. (%(new_value)s instead of %(current_value)s)") % {
+            self.next_academic_year: [
+                self.ALREADY_MODIFIED % {
                     'col_name': _('Active'),
                     'new_value': _('yes') if new_status_value else _('no'),
                     'current_value': _('yes') if initial_status_value else _('no')
@@ -496,23 +491,22 @@ class TestLearningUnitPostponementFormFindConsistencyErrors(LearningUnitPostpone
         self.assertTrue(self.form.is_valid(), self.form.errors)
         result = self.form.consistency_errors
         self.assertIsInstance(result, OrderedDict)
-        self.assertEqual(expected_result[next_academic_year], result[next_academic_year])
+        self.assertEqual(expected_result[self.next_academic_year], result[self.next_academic_year])
 
     def test_when_differences_found_on_2_next_years(self):
-        next_academic_year = AcademicYear.objects.get(year=self.learning_unit_year_full.academic_year.year + 1)
-        initial_credits_value, new_credits_value = self._change_credits_value(next_academic_year)
+        initial_credits_value, new_credits_value = self._change_credits_value(self.next_academic_year)
         next_academic_year_2 = AcademicYear.objects.get(year=self.learning_unit_year_full.academic_year.year + 2)
-        initial_credits_value_2, new_credits_value_2 = self._change_credits_value(next_academic_year)
+        initial_credits_value_2, new_credits_value_2 = self._change_credits_value(self.next_academic_year)
         expected_result = OrderedDict({
-            next_academic_year: [
-                _("%(col_name)s has been already modified. (%(new_value)s instead of %(current_value)s)") % {
+            self.next_academic_year: [
+                self.ALREADY_MODIFIED % {
                     'col_name': "Crédits",
                     'current_value': initial_credits_value,
                     'new_value': new_credits_value
                 }
             ],
             next_academic_year_2: [
-                _("%(col_name)s has been already modified. (%(new_value)s instead of %(current_value)s)") % {
+                self.ALREADY_MODIFIED % {
                     'col_name': "Crédits",
                     'current_value': initial_credits_value_2,
                     'new_value': new_credits_value_2
@@ -523,14 +517,14 @@ class TestLearningUnitPostponementFormFindConsistencyErrors(LearningUnitPostpone
         self.assertTrue(self.form.is_valid(), self.form.errors)
         result = self.form.consistency_errors
         self.assertIsInstance(result, OrderedDict)  # Need to be ordered by academic_year
-        self.assertEqual(expected_result[next_academic_year], result[next_academic_year])
+        self.assertEqual(expected_result[self.next_academic_year], result[self.next_academic_year])
 
     def test_when_differences_found_on_entities(self):
-        next_academic_year = AcademicYear.objects.get(year=self.learning_unit_year_full.academic_year.year + 1)
-        initial_requirement_entity, new_requirement_entity = self._change_requirement_entity_value(next_academic_year)
+        initial_requirement_entity, new_requirement_entity = self._change_requirement_entity_value(
+            self.next_academic_year)
         expected_result = OrderedDict({
-            next_academic_year: [
-                _("%(col_name)s has been already modified. (%(new_value)s instead of %(current_value)s)") % {
+            self.next_academic_year: [
+                self.ALREADY_MODIFIED % {
                     'col_name': _('Requirement entity'),
                     'current_value': initial_requirement_entity,
                     'new_value': new_requirement_entity
@@ -543,13 +537,12 @@ class TestLearningUnitPostponementFormFindConsistencyErrors(LearningUnitPostpone
         self.assertEqual(result, expected_result)
 
     def test_when_differences_found_on_repartition_volume(self):
-        next_academic_year = AcademicYear.objects.get(year=self.learning_unit_year_full.academic_year.year + 1)
-        component = self._change_requirement_entity_repartition_vlume(next_academic_year, 24)
+        component = self._change_requirement_entity_repartition_vlume(self.next_academic_year, 24)
 
         requirement_entity = component.learning_unit_year.learning_container_year.requirement_entity
 
         expected_result = OrderedDict({
-            next_academic_year: [
+            self.next_academic_year: [
                 _("The repartition volume of %(col_name)s has been already modified. "
                   "(%(new_value)s instead of %(current_value)s)") % {
                     'col_name': component.acronym + "-" + requirement_entity.most_recent_acronym,
@@ -568,12 +561,11 @@ class TestLearningUnitPostponementFormFindConsistencyErrors(LearningUnitPostpone
         In this test, we ensure that if N year have additional_requirement_entity_2 AND N+1 doesn't have,
         it display an error and prevent crash on _check_postponement_repartition_volume [ GET() ]
         """
-        next_academic_year = AcademicYear.objects.get(year=self.learning_unit_year_full.academic_year.year + 1)
-        initial_entity = self._remove_additional_requirement_entity_2(academic_year=next_academic_year)
+        initial_entity = self._remove_additional_requirement_entity_2(academic_year=self.next_academic_year)
 
         expected_result = OrderedDict({
-            next_academic_year: [
-                _("%(col_name)s has been already modified. (%(new_value)s instead of %(current_value)s)") % {
+            self.next_academic_year: [
+                self.ALREADY_MODIFIED % {
                     'col_name': _('Additional requirement entity 2'),
                     'new_value': '-',
                     'current_value': initial_entity

@@ -56,7 +56,7 @@ from base.tests.factories.entity_version import MainEntityVersionFactory
 from base.tests.factories.group import GroupFactory
 from base.tests.factories.hops import HopsFactory
 from base.tests.factories.organization import OrganizationFactory
-from base.tests.factories.person import PersonFactory, CentralManagerFactory
+from base.tests.factories.person import PersonFactory, CentralManagerFactory, PersonWithPermissionsFactory
 from base.tests.factories.person_entity import PersonEntityFactory
 from base.tests.forms.education_group.test_common import EducationGroupYearModelFormMixin
 from reference.tests.factories.domain import DomainFactory
@@ -86,13 +86,11 @@ class TestTrainingEducationGroupYearForm(EducationGroupYearModelFormMixin):
     def test_clean_certificate_aims(self):
         administration_entity_version = MainEntityVersionFactory(end_date=None)
         management_entity_version = MainEntityVersionFactory(end_date=None)
-        person = PersonFactory()
+        person = CentralManagerFactory()
         PersonEntityFactory(
             person=person,
             entity=management_entity_version.entity
         )
-        user = person.user
-        user.groups.add(self.central_manager)
 
         parent_education_group_year = TrainingFactory(academic_year=self.academic_year,
                                                       education_group_type=self.education_group_type,
@@ -125,7 +123,7 @@ class TestTrainingEducationGroupYearForm(EducationGroupYearModelFormMixin):
                     },
                     parent=parent_education_group_year,
                     education_group_type=parent_education_group_year.education_group_type,
-                    user=user,
+                    user=person.user,
                 )
                 if i == 0:
                     self.assertTrue(form.is_valid())
@@ -213,23 +211,26 @@ class TestTrainingEducationGroupYearForm(EducationGroupYearModelFormMixin):
 class TestPostponementEducationGroupYear(TestCase):
     @classmethod
     def setUpTestData(cls):
+        cls.current_academic_year = create_current_academic_year()
         start_year = AcademicYearFactory(year=get_current_year())
         end_year = AcademicYearFactory(year=get_current_year() + 40)
         cls.list_acs = GenerateAcademicYear(start_year, end_year).academic_years
         # Create user and attached it to management entity
         cls.person = PersonFactory()
-        cls.user = cls.person.user
         cls.management_entity_version = MainEntityVersionFactory()
-        cls.education_group_type = EducationGroupTypeFactory(
-            category=education_group_categories.TRAINING,
-            name=education_group_types.TrainingType.BACHELOR
-        )
 
     def setUp(self):
+        self.education_group_year = TrainingFactory(
+            academic_year=self.current_academic_year,
+            education_group_type__name=education_group_types.TrainingType.BACHELOR.name,
+            management_entity=self.management_entity_version.entity,
+            administration_entity=MainEntityVersionFactory().entity
+        )
+        PersonEntityFactory(person=self.person, entity=self.education_group_year.management_entity)
         self.data = {
             'title': 'Métamorphose',
             'title_english': 'Transfiguration',
-            'education_group_type': self.education_group_type.pk,
+            'education_group_type': self.education_group_year.education_group_type.pk,
             'credits': 42,
             'acronym': 'CRSCHOIXDVLD',
             'partial_acronym': 'LDVLD101R',
@@ -245,18 +246,11 @@ class TestPostponementEducationGroupYear(TestCase):
             "constraint_type": "",
             "diploma_printing_title": 'Diploma title'
         }
-        self.administration_entity_version = MainEntityVersionFactory()
-        self.education_group_year = TrainingFactory(
-            academic_year=create_current_academic_year(),
-            education_group_type__name=education_group_types.TrainingType.BACHELOR,
-            management_entity=self.management_entity_version.entity,
-            administration_entity=self.administration_entity_version.entity,
-        )
-        PersonEntityFactory(person=self.person, entity=self.education_group_year.management_entity)
 
     def test_init(self):
         # In case of creation
-        form = TrainingForm({}, user=self.user, education_group_type=self.education_group_type)
+        form = TrainingForm({}, user=self.person.user,
+                            education_group_type=self.education_group_year.education_group_type)
         self.assertFalse(form.dict_initial_egy)
         self.assertEqual(form.initial_dicts, {'educationgrouporganization_set': {}})
 
@@ -267,7 +261,7 @@ class TestPostponementEducationGroupYear(TestCase):
         )
         form = TrainingForm(
             {},
-            user=self.user,
+            user=self.person.user,
             instance=self.education_group_year
         )
         dict_initial_egy = model_to_dict_fk(
@@ -310,7 +304,7 @@ class TestPostponementEducationGroupYear(TestCase):
         form = TrainingForm(
             self.data,
             instance=self.education_group_year,
-            user=self.user
+            user=self.person.user
         )
         self.assertTrue(form.is_valid(), form.errors)
         form.save()
@@ -341,7 +335,7 @@ class TestPostponementEducationGroupYear(TestCase):
             education_group_year=self.education_group_year
         )
 
-        form = TrainingForm(self.data, instance=self.education_group_year, user=self.user)
+        form = TrainingForm(self.data, instance=self.education_group_year, user=self.person.user)
         self.assertTrue(form.is_valid(), form.errors)
         form.save()
 
@@ -382,7 +376,7 @@ class TestPostponementEducationGroupYear(TestCase):
         unconsistent_orga.save()
         # have to invalidate cache
         del self.education_group_year.coorganizations
-        form = TrainingForm(self.data, instance=self.education_group_year, user=self.user)
+        form = TrainingForm(self.data, instance=self.education_group_year, user=self.person.user)
 
         self.assertTrue(form.is_valid(), form.errors)
         form.save()
@@ -402,7 +396,7 @@ class TestPostponementEducationGroupYear(TestCase):
         )
 
     def _postpone_coorganization_and_check(self):
-        form = TrainingForm(self.data, instance=self.education_group_year, user=self.user)
+        form = TrainingForm(self.data, instance=self.education_group_year, user=self.person.user)
         self.assertTrue(form.is_valid(), form.errors)
         form.save()
         self.assertEqual(len(form.warnings), 0, form.warnings)
@@ -417,7 +411,7 @@ class TestPostponementEducationGroupYear(TestCase):
         form = TrainingForm(
             self.data,
             instance=self.education_group_year,
-            user=self.user
+            user=self.person.user
         )
         self.assertTrue(form.is_valid(), form.errors)
         form.save()
@@ -445,14 +439,13 @@ class TestPostponementEducationGroupYear(TestCase):
         self.assertEqual(last.certificate_aims.count(), len(certificate_aims))
 
         # update with a conflict
-        dom3 = DomainFactory(name="Divination")
-        EducationGroupYearDomainFactory(domain=dom3, education_group_year=last)
+        EducationGroupYearDomainFactory(domain__name="Divination", education_group_year=last)
 
         domains = [DomainFactory(name="Care of Magical Creatures"), DomainFactory(name="Muggle Studies")]
 
         self.data["secondary_domains"] = '|'.join([str(domain.pk) for domain in domains])
 
-        form = TrainingForm(self.data, instance=self.education_group_year, user=self.user)
+        form = TrainingForm(self.data, instance=self.education_group_year, user=self.person.user)
         self.assertTrue(form.is_valid(), form.errors)
         form.save()
 
@@ -469,7 +462,7 @@ class TestPostponementEducationGroupYear(TestCase):
         self.assertEqual(len(form.warnings), 1)
 
 
-class TestPostponeTrainingProperty(TestCase):
+class TestPostponePropertiesMixin(TestCase):
     @classmethod
     def setUpTestData(cls):
         super().setUpTestData()
@@ -495,6 +488,8 @@ class TestPostponeTrainingProperty(TestCase):
             'management_entity': cls.entity_version.pk
         })
 
+
+class TestPostponeTrainingProperty(TestPostponePropertiesMixin):
     def test_save_with_postponement_certificate_aims_inconsistant(self):
         """
         This test ensure that the we haven't an error if the certificate aims is inconsistant in future because
@@ -529,33 +524,12 @@ class TestPostponeTrainingProperty(TestCase):
         self.assertTrue(EducationGroupCertificateAim.objects.filter(pk=certificate_aims_in_future.pk).exists())
 
 
-class TestPostponeCertificateAims(TestCase):
+class TestPostponeCertificateAims(TestPostponePropertiesMixin):
     @classmethod
     def setUpTestData(cls):
         super().setUpTestData()
 
-        cls.current_academic_year = AcademicYearFactory(current=True)
-        cls.generated_ac_years = AcademicYearFactory.produce(
-            base_year=cls.current_academic_year.year,
-            number_past=0,
-            number_future=7
-        )
-        cls.entity_version = MainEntityVersionFactory(entity_type=entity_type.SECTOR)
-        cls.central_manager = CentralManagerFactory()
-        PersonEntityFactory(person=cls.central_manager, entity=cls.entity_version.entity)
-        cls.training = TrainingFactory(
-            management_entity=cls.entity_version.entity,
-            administration_entity=cls.entity_version.entity,
-            academic_year=cls.current_academic_year
-        )
-        # Save the training instance will create N+6 data...
-        form_data = model_to_dict_fk(cls.training, exclude=('secondary_domains',))
-        form_data.update({
-            'primary_language': form_data['primary_language_id'],
-            'administration_entity': cls.entity_version.pk,
-            'management_entity': cls.entity_version.pk
-        })
-        training_form = TrainingForm(form_data, instance=cls.training, user=cls.central_manager.user)
+        training_form = TrainingForm(cls.form_data, instance=cls.training, user=cls.central_manager.user)
         training_form.is_valid()
         training_form.save()
 
@@ -653,16 +627,24 @@ class TestPermissionField(TestCase):
             permissions=cls.permissions,
         )
 
-        person = PersonFactory()
-        cls.user_with_perm = person.user
-        cls.user_with_perm.user_permissions.add(cls.permissions[2])
+        cls.user_with_perm = PersonWithPermissionsFactory(cls.permissions[2].codename).user
 
-        person = PersonFactory()
-        cls.user_without_perm = person.user
-        cls.user_without_perm.user_permissions.add(PermissionFactory())
+        cls.user_without_perm = PersonWithPermissionsFactory(PermissionFactory().codename).user
 
         cls.education_group_type = EducationGroupTypeFactory(
             category=education_group_categories.TRAINING
+        )
+        cls.form_without_perm = TrainingForm(
+            {},
+            user=cls.user_without_perm,
+            education_group_type=cls.education_group_type,
+            context=TRAINING_DAILY_MANAGEMENT,
+        )
+        cls.form = TrainingForm(
+            {},
+            user=cls.user_with_perm,
+            education_group_type=cls.education_group_type,
+            context=TRAINING_DAILY_MANAGEMENT,
         )
 
     def test_init_case_user_with_perms(self):
@@ -672,14 +654,8 @@ class TestPermissionField(TestCase):
         For field which are not present in FieldReference (same context), the field is not disabled by default
          ==> [partial_acronym]
         """
-        form = TrainingForm(
-            {},
-            user=self.user_with_perm,
-            education_group_type=self.education_group_type,
-            context=TRAINING_DAILY_MANAGEMENT,
-        )
-        self.assertFalse(form.forms[forms.ModelForm].fields["main_teaching_campus"].disabled)
-        self.assertFalse(form.forms[forms.ModelForm].fields["partial_acronym"].disabled)
+        self.assertFalse(self.form.forms[forms.ModelForm].fields["main_teaching_campus"].disabled)
+        self.assertFalse(self.form.forms[forms.ModelForm].fields["partial_acronym"].disabled)
 
     def test_init_case_user_without_perms(self):
         """
@@ -688,39 +664,21 @@ class TestPermissionField(TestCase):
         For field which are not present in FieldReference (same context), the field is not disabled by default
          ==> [partial_acronym]
         """
-        form = TrainingForm(
-            {},
-            user=self.user_without_perm,
-            education_group_type=self.education_group_type,
-            context=TRAINING_DAILY_MANAGEMENT,
-        )
-        self.assertTrue(form.forms[forms.ModelForm].fields["main_teaching_campus"].disabled)
-        self.assertFalse(form.forms[forms.ModelForm].fields["partial_acronym"].disabled)
+        self.assertTrue(self.form_without_perm.forms[forms.ModelForm].fields["main_teaching_campus"].disabled)
+        self.assertFalse(self.form_without_perm.forms[forms.ModelForm].fields["partial_acronym"].disabled)
 
     def test_ensure_diploma_tab_fields_property(self):
-        form = TrainingForm(
-            {},
-            user=self.user_with_perm,
-            education_group_type=self.education_group_type,
-            context=TRAINING_DAILY_MANAGEMENT,
-        )
         expected_fields = [
             'joint_diploma', 'diploma_printing_title', 'professional_title',
             'section', 'certificate_aims'
         ]
-        self.assertEqual(form.diploma_tab_fields, expected_fields)
+        self.assertEqual(self.form.diploma_tab_fields, expected_fields)
 
     def test_ensure_show_diploma_tab_is_hidden(self):
         """
         This test ensure that the show diploma property is False if all fields contains in tab are disabled
         """
-        form = TrainingForm(
-            {},
-            user=self.user_without_perm,
-            education_group_type=self.education_group_type,
-            context=TRAINING_DAILY_MANAGEMENT,
-        )
-        for field_name_in_diploma in form.diploma_tab_fields:
-            form.forms[forms.ModelForm].fields[field_name_in_diploma].disabled = True
+        for field_name_in_diploma in self.form_without_perm.diploma_tab_fields:
+            self.form_without_perm.forms[forms.ModelForm].fields[field_name_in_diploma].disabled = True
 
-        self.assertFalse(form.show_diploma_tab())
+        self.assertFalse(self.form_without_perm.show_diploma_tab())
