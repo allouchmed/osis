@@ -52,6 +52,10 @@ class TestEducationGroupSkillsAchievements(TestCase):
             academic_year=AcademicYearFactory(current=True)
         )
         cls.person = PersonWithPermissionsFactory("can_access_education_group")
+        cls.url = reverse(
+            "education_group_skills_achievements",
+            args=[cls.education_group_year.pk, cls.education_group_year.pk]
+        )
 
     def setUp(self):
         self.mocked_perm = self.perm_patcher.start()
@@ -59,10 +63,7 @@ class TestEducationGroupSkillsAchievements(TestCase):
         self.client.force_login(self.person.user)
 
     def _call_url_as_http_get(self):
-        response = self.client.get(
-            reverse("education_group_skills_achievements",
-                    args=[self.education_group_year.pk, self.education_group_year.pk])
-        )
+        response = self.client.get(self.url, args=[self.education_group_year.pk, self.education_group_year.pk])
         self.assertEqual(response.status_code, HttpResponse.status_code)
         return response
 
@@ -86,18 +87,7 @@ class TestEducationGroupSkillsAchievements(TestCase):
         self.assertTrue(response.context["can_edit_information"])
 
     def test_get_certificate_aim(self):
-        certificate_aim_french = TranslatedTextFactory(
-            entity=entity_name.OFFER_YEAR,
-            reference=self.education_group_year.id,
-            text_label__label=CMS_LABEL_PROGRAM_AIM,
-            language=settings.LANGUAGE_CODE_FR,
-        )
-        certificate_aim_english = TranslatedTextFactory(
-            entity=entity_name.OFFER_YEAR,
-            reference=self.education_group_year.id,
-            text_label__label=CMS_LABEL_PROGRAM_AIM,
-            language=settings.LANGUAGE_CODE_EN,
-        )
+        certificate_aim_french, certificate_aim_english = self._get_offer_cms_by_label(CMS_LABEL_PROGRAM_AIM)
         response = self._call_url_as_http_get()
         self.assertEqual(
             response.context[CMS_LABEL_PROGRAM_AIM][settings.LANGUAGE_CODE_FR], certificate_aim_french
@@ -107,18 +97,8 @@ class TestEducationGroupSkillsAchievements(TestCase):
         )
 
     def test_get_additional_informations(self):
-        additional_infos_french = TranslatedTextFactory(
-            entity=entity_name.OFFER_YEAR,
-            reference=self.education_group_year.id,
-            text_label__label=CMS_LABEL_ADDITIONAL_INFORMATION,
-            language=settings.LANGUAGE_CODE_FR,
-        )
-        additional_infos_english = TranslatedTextFactory(
-            entity=entity_name.OFFER_YEAR,
-            reference=self.education_group_year.id,
-            text_label__label=CMS_LABEL_ADDITIONAL_INFORMATION,
-            language=settings.LANGUAGE_CODE_EN,
-        )
+        additional_infos_french, additional_infos_english = self._get_offer_cms_by_label(
+            CMS_LABEL_ADDITIONAL_INFORMATION)
         response = self._call_url_as_http_get()
         self.assertEqual(
             response.context[CMS_LABEL_ADDITIONAL_INFORMATION][settings.LANGUAGE_CODE_FR],
@@ -128,3 +108,18 @@ class TestEducationGroupSkillsAchievements(TestCase):
             response.context[CMS_LABEL_ADDITIONAL_INFORMATION][settings.LANGUAGE_CODE_EN],
             additional_infos_english
         )
+
+    def _get_offer_cms_by_label(self, label):
+        cms_fr = TranslatedTextFactory(
+            entity=entity_name.OFFER_YEAR,
+            reference=self.education_group_year.id,
+            text_label__label=label,
+            language=settings.LANGUAGE_CODE_FR,
+        )
+        cms_en = TranslatedTextFactory(
+            entity=entity_name.OFFER_YEAR,
+            reference=self.education_group_year.id,
+            text_label__label=label,
+            language=settings.LANGUAGE_CODE_EN,
+        )
+        return cms_fr, cms_en

@@ -33,9 +33,8 @@ from django.utils.translation import gettext_lazy as _
 from backoffice.settings.base import LANGUAGE_CODE_FR, LANGUAGE_CODE_EN
 from base.tests.factories.education_group_achievement import EducationGroupAchievementFactory
 from base.tests.factories.education_group_year import EducationGroupYearFactory
-from base.tests.factories.person import PersonFactory, PersonWithPermissionsFactory
+from base.tests.factories.person import PersonWithPermissionsFactory
 from base.tests.factories.person_entity import PersonEntityFactory
-from base.tests.factories.user import UserFactory
 from base.views.education_groups.achievement.detail import CMS_LABEL_PROGRAM_AIM, CMS_LABEL_ADDITIONAL_INFORMATION
 from cms.enums import entity_name
 from cms.models.translated_text import TranslatedText
@@ -52,17 +51,15 @@ class TestEducationGroupAchievementActionUpdateDelete(TestCase):
         cls.achievement_1 = EducationGroupAchievementFactory(education_group_year=cls.education_group_year)
         cls.achievement_2 = EducationGroupAchievementFactory(education_group_year=cls.education_group_year)
 
-        cls.user = UserFactory()
         cls.person = PersonWithPermissionsFactory(
             'can_access_education_group',
             'change_educationgroupachievement',
             'delete_educationgroupachievement',
-            user=cls.user
         )
         PersonEntityFactory(person=cls.person, entity=cls.education_group_year.management_entity)
 
     def setUp(self):
-        self.client.force_login(self.user)
+        self.client.force_login(self.person.user)
 
     def test_form_valid_up(self):
         response = self.client.post(
@@ -126,8 +123,8 @@ class TestEducationGroupAchievementActionUpdateDelete(TestCase):
         self.achievement_2.refresh_from_db()
         self.assertEqual(self.achievement_2.code_name, code)
 
-    def test_permission_denied(self):
-        self.user.user_permissions.remove(Permission.objects.get(codename="change_educationgroupachievement"))
+    def test_permission_denied_with_data_code_name(self):
+        self.person.user.user_permissions.remove(Permission.objects.get(codename="change_educationgroupachievement"))
         code = "The life is like a box of chocolates"
         response = self.client.post(
             reverse(
@@ -157,7 +154,7 @@ class TestEducationGroupAchievementActionUpdateDelete(TestCase):
             self.achievement_0.refresh_from_db()
 
     def test_permission_denied(self):
-        self.user.user_permissions.remove(Permission.objects.get(codename="delete_educationgroupachievement"))
+        self.person.user.user_permissions.remove(Permission.objects.get(codename="delete_educationgroupachievement"))
         response = self.client.post(
             reverse(
                 "delete_education_group_achievement",
@@ -173,13 +170,16 @@ class TestEducationGroupAchievementActionUpdateDelete(TestCase):
 
 class TestEducationGroupAchievementCMSSetup(TestCase):
     def setUp(self):
-        self.user = UserFactory()
-        self.person = PersonFactory(user=self.user)
-        self.user.user_permissions.add(Permission.objects.get(codename="can_access_education_group"))
-        self.user.user_permissions.add(Permission.objects.get(codename="change_educationgroupachievement"))
+        self.person = PersonWithPermissionsFactory("can_access_education_group", "change_educationgroupachievement")
         self.education_group_year = EducationGroupYearFactory()
         PersonEntityFactory(person=self.person, entity=self.education_group_year.management_entity)
-        self.client.force_login(self.user)
+        self.client.force_login(self.person.user)
+        """This test ensure that the french version is updated and the english version is created"""
+        self.data = {
+            "text_french": 'dummy text in french',
+            "text_english": 'dummy text in english'
+        }
+        self.cms_text = 'Evil hacker'
 
 
 class TestEditEducationGroupAchievementProgramAim(TestEducationGroupAchievementCMSSetup):
@@ -203,35 +203,29 @@ class TestEditEducationGroupAchievementProgramAim(TestEducationGroupAchievementC
         )
 
     def test_update_achievement_program_aim(self):
-        """This test ensure that the french version is updated and the english version is created"""
-        data = {
-            "text_french": 'dummy text in french',
-            "text_english": 'dummy text in english'
-        }
-
-        response = self.client.post(self.url, data=data)
+        response = self.client.post(self.url, data=self.data)
 
         self.assertEqual(response.status_code, 302)
         self.program_aim_french.refresh_from_db()
         # Update french version
-        self.assertEqual(self.program_aim_french.text, data['text_french'])
+        self.assertEqual(self.program_aim_french.text, self.data['text_french'])
         # Create english version
         self.assertTrue(TranslatedText.objects.filter(
             text_label=self.text_label,
             reference=self.education_group_year.pk,
             language=LANGUAGE_CODE_EN,
             entity=entity_name.OFFER_YEAR,
-            text=data['text_english']
+            text=self.data['text_english']
         ).exists())
 
     def test_update_without_permission(self):
-        self.user.user_permissions.remove(Permission.objects.get(codename="change_educationgroupachievement"))
-        response = self.client.post(self.url, data={'french_text': 'Evil hacker'})
+        self.person.user.user_permissions.remove(Permission.objects.get(codename="change_educationgroupachievement"))
+        response = self.client.post(self.url, data={'french_text': self.cms_text})
         self.assertEqual(response.status_code, 403)
 
     def test_update_when_user_not_logged(self):
         self.client.logout()
-        response = self.client.post(self.url, data={'french_text': 'Evil hacker'})
+        response = self.client.post(self.url, data={'french_text': self.cms_text})
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(response, "/login/?next={}".format(self.url))
 
@@ -258,34 +252,28 @@ class TestEditEducationGroupAchievementAdditionalInformation(TestEducationGroupA
         )
 
     def test_update_achievement_program_aim(self):
-        """This test ensure that the french version is updated and the english version is created"""
-        data = {
-            "text_french": 'dummy text in french',
-            "text_english": 'dummy text in english'
-        }
-
-        response = self.client.post(self.url, data=data)
+        response = self.client.post(self.url, data=self.data)
 
         self.assertEqual(response.status_code, 302)
         self.program_aim_french.refresh_from_db()
         # Update french version
-        self.assertEqual(self.program_aim_french.text, data['text_french'])
+        self.assertEqual(self.program_aim_french.text, self.data['text_french'])
         # Create english version
         self.assertTrue(TranslatedText.objects.filter(
             text_label=self.text_label,
             reference=self.education_group_year.pk,
             language=LANGUAGE_CODE_EN,
             entity=entity_name.OFFER_YEAR,
-            text=data['text_english']
+            text=self.data['text_english']
         ).exists())
 
     def test_update_without_permission(self):
-        self.user.user_permissions.remove(Permission.objects.get(codename="change_educationgroupachievement"))
-        response = self.client.post(self.url, data={'french_text': 'Evil hacker'})
+        self.person.user.user_permissions.remove(Permission.objects.get(codename="change_educationgroupachievement"))
+        response = self.client.post(self.url, data={'french_text': self.cms_text})
         self.assertEqual(response.status_code, 403)
 
     def test_update_when_user_not_logged(self):
         self.client.logout()
-        response = self.client.post(self.url, data={'french_text': 'Evil hacker'})
+        response = self.client.post(self.url, data={'french_text': self.cms_text})
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(response, "/login/?next={}".format(self.url))
