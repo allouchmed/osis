@@ -25,7 +25,6 @@
 ############################################################################
 import datetime
 
-from django.contrib.auth.models import Permission
 from django.contrib.messages import get_messages, SUCCESS
 from django.test import TestCase
 from django.urls import reverse
@@ -40,7 +39,6 @@ from base.tests.factories.external_learning_unit_year import ExternalLearningUni
 from base.tests.factories.learning_unit_year import LearningUnitYearFullFactory
 from base.tests.factories.person import CentralManagerFactory
 from base.tests.factories.person_entity import PersonEntityFactory
-from base.tests.factories.user import UserFactory
 from base.tests.forms.test_external_learning_unit import get_valid_external_learning_unit_form_data
 from base.views.learning_units.update import update_learning_unit
 
@@ -49,11 +47,7 @@ from base.views.learning_units.update import update_learning_unit
 class TestUpdateExternalLearningUnitView(TestCase):
     @classmethod
     def setUpTestData(cls):
-        cls.user = UserFactory()
-        cls.person = CentralManagerFactory(
-            "can_access_learningunit", "can_edit_learningunit",
-            user=cls.user
-        )
+        cls.person = CentralManagerFactory("can_access_learningunit", "can_edit_learningunit")
 
         person_entity = PersonEntityFactory(
             person=cls.person,
@@ -80,14 +74,15 @@ class TestUpdateExternalLearningUnitView(TestCase):
 
     def setUp(self):
         self.external = ExternalLearningUnitYearFactory(learning_unit_year=self.luy)
-        self.client.force_login(self.user)
+        self.client.force_login(self.person.user)
 
     def test_update_get(self):
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
 
     def test_update_get_permission_denied(self):
-        self.user.user_permissions.remove(Permission.objects.get(codename="can_edit_learningunit"))
+        person = CentralManagerFactory("can_access_learningunit")
+        self.client.force_login(person.user)
 
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 403)
