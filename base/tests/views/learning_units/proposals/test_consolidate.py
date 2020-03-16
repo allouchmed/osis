@@ -27,7 +27,6 @@ import random
 from unittest import mock
 from unittest.mock import patch
 
-from django.contrib.auth.models import Permission
 from django.http import HttpResponseNotAllowed, HttpResponseForbidden, HttpResponseNotFound
 from django.test import TestCase
 from django.test.utils import override_settings
@@ -40,12 +39,12 @@ from base.business.learning_unit import CMS_LABEL_PEDAGOGY_FR_AND_EN, CMS_LABEL_
 from base.business.learning_units.edition import _descriptive_fiche_and_achievements_update
 from base.models.enums import proposal_state, learning_unit_year_subtypes, \
     proposal_type
-from base.tests.factories.academic_year import create_current_academic_year, AcademicYearFactory, get_current_year
+from base.tests.factories.academic_year import AcademicYearFactory, get_current_year
 from base.tests.factories.entity_version import EntityVersionFactory
 from base.tests.factories.learning_achievement import LearningAchievementFactory
 from base.tests.factories.learning_unit import LearningUnitFactory
 from base.tests.factories.learning_unit_year import LearningUnitYearFactory
-from base.tests.factories.person import PersonFactory
+from base.tests.factories.person import PersonFactory, PersonWithPermissionsFactory
 from base.tests.factories.person_entity import PersonEntityFactory
 from base.tests.factories.proposal_learning_unit import ProposalLearningUnitFactory
 from cms.models.translated_text import TranslatedText
@@ -62,7 +61,7 @@ FR_CODE_LANGUAGE = 'FR'
 class TestConsolidate(TestCase):
     @classmethod
     def setUpTestData(cls):
-        cls.current_academic_year = create_current_academic_year()
+        cls.current_academic_year = AcademicYearFactory(current=True)
 
         cls.proposal = ProposalLearningUnitFactory(
             state=proposal_state.ProposalState.ACCEPTED.name,
@@ -73,9 +72,7 @@ class TestConsolidate(TestCase):
         )
         cls.learning_unit_year = cls.proposal.learning_unit_year
 
-        cls.person = PersonFactory()
-        cls.person.user.user_permissions.add(Permission.objects.get(codename="can_access_learningunit"))
-        cls.person.user.user_permissions.add(Permission.objects.get(codename="can_consolidate_learningunit_proposal"))
+        cls.person = PersonWithPermissionsFactory("can_access_learningunit", "can_consolidate_learningunit_proposal")
 
         person_entity = PersonEntityFactory(person=cls.person,
                                             entity=cls.learning_unit_year.learning_container_year.requirement_entity)
@@ -147,31 +144,31 @@ class TestConsolidate(TestCase):
 
 
 class TestConsolidateReportForCmsLearningUnitAchievement(TestCase):
-
-    def setUp(self):
-        self.language_fr = LanguageFactory(code=FR_CODE_LANGUAGE)
-        self.language_en = LanguageFactory(code=EN_CODE_LANGUAGE)
+    @classmethod
+    def setUpTestData(cls):
+        cls.language_fr = LanguageFactory(code=FR_CODE_LANGUAGE)
+        cls.language_en = LanguageFactory(code=EN_CODE_LANGUAGE)
 
         current_year = get_current_year()
-        self.lu = LearningUnitFactory()
+        cls.lu = LearningUnitFactory()
 
-        self.learning_unit_year_in_future = []
-        self.luy_past = []
+        cls.learning_unit_year_in_future = []
+        cls.luy_past = []
 
         year = current_year - 3
 
         concerned_cms_labels = \
             CMS_LABEL_PEDAGOGY_FR_AND_EN + CMS_LABEL_PEDAGOGY_FR_ONLY + CMS_LABEL_SPECIFICATIONS + CMS_LABEL_SUMMARY
 
-        self.text_label = TextLabelFactory(label=random.choice(concerned_cms_labels),
-                                           entity='learning_unit_year')
+        cls.text_label = TextLabelFactory(label=random.choice(concerned_cms_labels),
+                                          entity='learning_unit_year')
 
         while year <= current_year + 6:
             ay = AcademicYearFactory(year=year)
-            luy = LearningUnitYearFactory(learning_unit=self.lu, academic_year=ay,
+            luy = LearningUnitYearFactory(learning_unit=cls.lu, academic_year=ay,
                                           acronym='LECON2365')
 
-            self._create_description_fiche_and_specifications_data(current_year, luy, year)
+            cls._create_description_fiche_and_specifications_data(current_year, luy, year)
             year += 1
 
     @patch('base.business.learning_units.edition._update_descriptive_fiche')
@@ -208,20 +205,21 @@ class TestConsolidateReportForCmsLearningUnitAchievement(TestCase):
             else:
                 self.assertEqual(la.text, NEW_TEXT.format(proposal.learning_unit_year.academic_year.year))
 
-    def _create_description_fiche_and_specifications_data(self, current_year, luy, year):
+    @classmethod
+    def _create_description_fiche_and_specifications_data(cls, current_year, luy, year):
         a_text = "old text {}".format(year)
         if year > current_year:
-            self.learning_unit_year_in_future.append(luy)
+            cls.learning_unit_year_in_future.append(luy)
         if year < current_year:
-            self.luy_past.append(luy)
+            cls.luy_past.append(luy)
         if year == current_year:
-            self.learning_unit_year = luy
+            cls.learning_unit_year = luy
             a_text = NEW_TEXT.format(current_year)
         LearningAchievementFactory(learning_unit_year=luy,
                                    text=a_text,
                                    code_name="1",
-                                   language=self.language_fr,
+                                   language=cls.language_fr,
                                    consistency_id=1)
         TranslatedTextFactory(reference=luy.id, entity='learning_unit_year',
                               language="fr-be", text=a_text,
-                              text_label=self.text_label)
+                              text_label=cls.text_label)
