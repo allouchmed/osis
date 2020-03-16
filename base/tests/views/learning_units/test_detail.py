@@ -28,13 +28,11 @@ import datetime
 import reversion
 from django.contrib.auth.models import Permission
 from django.http import HttpResponseForbidden
-from django.test import TestCase, Client
+from django.test import TestCase
 from django.urls import reverse
 
 from base.models.enums import learning_unit_year_subtypes, learning_container_year_types
 from base.models.enums.academic_calendar_type import LEARNING_UNIT_EDITION_FACULTY_MANAGERS
-from base.models.enums.groups import UE_FACULTY_MANAGER_GROUP, FACULTY_MANAGER_GROUP
-from base.tests.business.test_perms import create_person_with_permission_and_group
 from base.tests.factories.academic_calendar import AcademicCalendarFactory
 from base.tests.factories.academic_year import AcademicYearFactory
 from base.tests.factories.entity import EntityFactory
@@ -45,7 +43,6 @@ from base.tests.factories.learning_container_year import LearningContainerYearFa
 from base.tests.factories.learning_unit_year import LearningUnitYearFactory, LearningUnitYearFullFactory
 from base.tests.factories.person import PersonFactory, FacultyManagerFactory, UEFacultyManagerFactory
 from base.tests.factories.person_entity import PersonEntityFactory
-from base.tests.factories.user import SuperUserFactory
 from base.views.learning_units.detail import SEARCH_URL_PART
 
 
@@ -60,11 +57,11 @@ class TestLearningUnitDetailView(TestCase):
             end_date=datetime.datetime(cls.current_academic_year.year + 1, 9, 14),
             reference=LEARNING_UNIT_EDITION_FACULTY_MANAGERS
         )
-        cls.a_superuser = SuperUserFactory()
-        cls.person = PersonFactory(user=cls.a_superuser)
+        cls.person = PersonFactory(user__superuser=True)
+        cls.template_name = 'learning_unit/identification.html'
 
     def setUp(self):
-        self.client.force_login(self.a_superuser)
+        self.client.force_login(self.person.user)
 
     def test_learning_unit_read(self):
         learning_container_year = LearningContainerYearFactory(academic_year=self.current_academic_year)
@@ -75,7 +72,7 @@ class TestLearningUnitDetailView(TestCase):
         header = {'HTTP_REFERER': SEARCH_URL_PART}
         response = self.client.get(reverse('learning_unit', args=[learning_unit_year.pk]), **header)
 
-        self.assertTemplateUsed(response, 'learning_unit/identification.html')
+        self.assertTemplateUsed(response, self.template_name)
         self.assertEqual(response.context['learning_unit_year'], learning_unit_year)
         self.assertEqual(self.client.session['search_url'], SEARCH_URL_PART)
 
@@ -108,7 +105,7 @@ class TestLearningUnitDetailView(TestCase):
 
         response = self.client.get(reverse('learning_unit', args=[learning_unit_year.pk]))
 
-        self.assertTemplateUsed(response, 'learning_unit/identification.html')
+        self.assertTemplateUsed(response, self.template_name)
         self.assertEqual(response.context['learning_unit_year'], learning_unit_year)
 
     def test_external_learning_unit_read_permission_denied(self):
@@ -120,17 +117,16 @@ class TestLearningUnitDetailView(TestCase):
         learning_unit_year = external_learning_unit_year.learning_unit_year
 
         a_user_without_perms = PersonFactory().user
-        client = Client()
-        client.force_login(a_user_without_perms)
+        self.client.force_login(a_user_without_perms)
 
-        response = client.get(reverse("learning_unit", args=[learning_unit_year.id]))
+        response = self.client.get(reverse("learning_unit", args=[learning_unit_year.id]))
         self.assertEqual(response.status_code, HttpResponseForbidden.status_code)
         self.assertTemplateUsed(response, "access_denied.html")
 
         a_user_without_perms.user_permissions.add(
             Permission.objects.get(codename='can_access_externallearningunityear'))
 
-        response = client.get(reverse("learning_unit", args=[learning_unit_year.id]))
+        response = self.client.get(reverse("learning_unit", args=[learning_unit_year.id]))
         self.assertEqual(response.status_code, 200)
 
     def test_learning_unit_with_faculty_manager_when_can_edit_end_date(self):
@@ -182,15 +178,13 @@ class TestLearningUnitDetailView(TestCase):
         EntityVersionFactory(entity=learning_container_year.requirement_entity)
         learning_unit_year.learning_unit.end_year = None
         learning_unit_year.learning_unit.save()
-        ue_manager = create_person_with_permission_and_group(UE_FACULTY_MANAGER_GROUP, 'can_edit_learningunit')
-        ue_manager.user.user_permissions.add(Permission.objects.get(codename='can_access_learningunit'))
+        ue_manager = FacultyManagerFactory('can_edit_learningunit', 'can_access_learningunit',
+                                           'can_edit_learningunit_date', 'can_access_learningunit')
         managers = [
-            create_person_with_permission_and_group(FACULTY_MANAGER_GROUP, 'can_edit_learningunit'),
+            FacultyManagerFactory('can_edit_learningunit', 'can_edit_learningunit_date', 'can_access_learningunit'),
             ue_manager
         ]
         for manager in managers:
-            manager.user.user_permissions.add(Permission.objects.get(codename='can_edit_learningunit_date'))
-            manager.user.user_permissions.add(Permission.objects.get(codename='can_access_learningunit'))
             PersonEntityFactory(entity=learning_container_year.requirement_entity, person=manager)
             url = reverse("learning_unit", args=[learning_unit_year.id])
             self.client.force_login(manager.user)
@@ -231,26 +225,15 @@ class TestLearningUnitDetailView(TestCase):
             subtype=learning_unit_year_subtypes.FULL,
             academic_year=self.current_academic_year
         )
-        LearningUnitYearFactory(
-            acronym="LCHIM1210A",
-            learning_container_year=learning_unit_container_year,
-            subtype=learning_unit_year_subtypes.PARTIM,
-            academic_year=self.current_academic_year
-        )
-        LearningUnitYearFactory(
-            acronym="LCHIM1210B",
-            learning_container_year=learning_unit_container_year,
-            subtype=learning_unit_year_subtypes.PARTIM,
-            academic_year=self.current_academic_year
-        )
-        LearningUnitYearFactory(
-            acronym="LCHIM1210F",
-            learning_container_year=learning_unit_container_year,
-            subtype=learning_unit_year_subtypes.PARTIM,
-            academic_year=self.current_academic_year
-        )
+        for letter in ['A', 'B', 'F']:
+            LearningUnitYearFactory(
+                acronym="LCHIM1210" + letter,
+                learning_container_year=learning_unit_container_year,
+                subtype=learning_unit_year_subtypes.PARTIM,
+                academic_year=self.current_academic_year
+            )
 
         response = self.client.get(reverse('learning_unit', args=[learning_unit_year.pk]))
 
-        self.assertTemplateUsed(response, 'learning_unit/identification.html')
+        self.assertTemplateUsed(response, self.template_name)
         self.assertEqual(len(response.context['learning_container_year_partims']), 3)

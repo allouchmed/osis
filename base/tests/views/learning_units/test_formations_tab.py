@@ -88,7 +88,6 @@ class TestLearningUnitFormationsTab(TestCase):
         self.url = reverse("learning_unit_formations", args=[self.learning_unit_year.id])
 
     def test_formations_tab(self):
-
         response = self.client.get(self.url)
         self.assertCountEqual(response.context['formations_by_educ_group_year'].get(self.education_group_year.pk),
                               [self.education_group_year_formation_parent])
