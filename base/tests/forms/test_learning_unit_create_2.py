@@ -60,7 +60,8 @@ from base.tests.factories.learning_container_year import LearningContainerYearFa
 from base.tests.factories.learning_unit import LearningUnitFactory
 from base.tests.factories.learning_unit_year import LearningUnitYearFactory
 from base.tests.factories.organization import OrganizationFactory
-from base.tests.factories.person import PersonFactory, PersonWithPermissionsFactory
+from base.tests.factories.person import PersonFactory, PersonWithPermissionsFactory, CentralManagerFactory, \
+    FacultyManagerFactory
 from base.tests.factories.person_entity import PersonEntityFactory
 from reference.tests.factories.language import LanguageFactory
 
@@ -173,8 +174,8 @@ class LearningUnitFullFormContextMixin(TestCase):
         start_year = AcademicYearFactory(year=cls.current_academic_year.year - 3)
         end_year = AcademicYearFactory(year=cls.current_academic_year.year + 7)
         cls.acs = GenerateAcademicYear(start_year=start_year, end_year=end_year).academic_years
-        cls.central_manager = PersonWithPermissionsFactory(groups=[CENTRAL_MANAGER_GROUP])
-        cls.faculty_manager = PersonWithPermissionsFactory(groups=[FACULTY_MANAGER_GROUP])
+        cls.central_manager = CentralManagerFactory()
+        cls.faculty_manager = FacultyManagerFactory()
 
     def setUp(self):
         self.learning_unit_year = LearningUnitYear.objects.get(
