@@ -37,7 +37,7 @@ from attribution.tests.factories.attribution_charge_new import AttributionCharge
 from base.models.enums import entity_type
 from base.models.enums import learning_unit_year_subtypes
 from base.models.learning_unit_year import LearningUnitYear
-from base.tests.factories.academic_year import AcademicYearFactory, create_editable_academic_year
+from base.tests.factories.academic_year import AcademicYearFactory
 from base.tests.factories.entity_version import EntityVersionFactory
 from base.tests.factories.learning_component_year import LearningComponentYearFactory
 from base.tests.factories.learning_container_year import LearningContainerYearFactory
@@ -56,30 +56,29 @@ YEAR_LIMIT_LUE_MODIFICATION = 2018
 class LearningUnitDelete(TestCase):
     @classmethod
     def setUpTestData(cls):
-        cls.person = PersonWithPermissionsFactory("can_delete_learningunit")
         cls.entity_version = EntityVersionFactory(entity_type=entity_type.FACULTY, acronym="SST",
                                                   start_date=datetime.date(year=1990, month=1, day=1),
                                                   end_date=None)
+        cls.person = PersonWithPermissionsFactory("can_delete_learningunit")
         PersonEntityFactory(person=cls.person, entity=cls.entity_version.entity, with_child=True)
         cls.start_year = AcademicYearFactory(year=YEAR_LIMIT_LUE_MODIFICATION)
         cls.the_partim_str = _('The partim')
         cls.the_lu_str = _('The learning unit')
 
     def setUp(self):
-        self.learning_unit_year_list = self.create_learning_unit_years_and_dependencies(self.start_year)
+        self.learning_unit_year_list = self.create_learning_unit_years_and_dependencies()
 
-    @classmethod
-    def create_learning_unit_years_and_dependencies(cls, start_year):
-        academic_year = create_editable_academic_year()
+    def create_learning_unit_years_and_dependencies(self):
+        academic_year = AcademicYearFactory(current=True)
         acronym = "LDROI1004"
-        l1 = LearningUnitFactory(start_year=start_year)
+        l1 = LearningUnitFactory(start_year=self.start_year)
 
         learning_unit_years = []
         for year in range(4):
             ac_year = AcademicYearFactory(year=academic_year.year + year)
             l_containeryear = LearningContainerYearFactory(
                 academic_year=ac_year,
-                requirement_entity=cls.entity_version.entity,
+                requirement_entity=self.entity_version.entity,
             )
             learning_unit_year = LearningUnitYearFactory(acronym=acronym, learning_unit=l1, academic_year=ac_year,
                                                          learning_container_year=l_containeryear)
@@ -93,22 +92,17 @@ class LearningUnitDelete(TestCase):
         return learning_unit_years
 
     def test_delete_all_learning_units_year_method_not_allowed(self):
-        learning_unit_years = self.learning_unit_year_list
+        response = self.client.get(reverse("learning_unit_delete_all", args=[self.learning_unit_year_list[1].id]))
 
-        response = self.client.get(reverse(delete_all_learning_units_year, args=[learning_unit_years[1].id]))
-
-        response = delete_all_learning_units_year(response.wsgi_request, learning_unit_years[1].id)
         self.assertEqual(response.status_code, 405)  # Method not allowed
 
     def test_delete_all_learning_units_year_case_success(self):
         learning_unit_years = self.learning_unit_year_list
 
-        request = self.client.post(reverse(delete_all_learning_units_year, args=[learning_unit_years[1].id]))
+        response = self.client.post(reverse(delete_all_learning_units_year, args=[learning_unit_years[1].id]))
 
-        response = delete_all_learning_units_year(request.wsgi_request, learning_unit_years[1].id)
-
-        msg_level = [m.level for m in get_messages(request.wsgi_request)]
-        msg = [m.message for m in get_messages(request.wsgi_request)]
+        msg_level = [m.level for m in get_messages(response)]
+        msg = [m.message for m in get_messages(response)]
         self.assertEqual(len(msg), 5)
         self.assertIn(messages.SUCCESS, msg_level)
 
@@ -124,12 +118,10 @@ class LearningUnitDelete(TestCase):
         learning_unit_years[1].learning_unit.start_year = AcademicYearFactory(year=2014)
         learning_unit_years[1].learning_unit.save()
 
-        request = self.client.post(reverse(delete_all_learning_units_year, args=[learning_unit_years[1].id]))
+        response = self.client.post(reverse("learning_unit_delete_all", args=[learning_unit_years[1].id]))
 
-        response = delete_all_learning_units_year(request.wsgi_request, learning_unit_years[1].id)
-
-        msg_level = [m.level for m in get_messages(request.wsgi_request)]
-        msg = [m.message for m in get_messages(request.wsgi_request)]
+        msg_level = [m.level for m in get_messages(response.wsgi_request)]
+        msg = [m.message for m in get_messages(response.wsgi_request)]
 
         self.assertIn(messages.ERROR, msg_level, msg)
 
@@ -236,7 +228,7 @@ class LearningUnitDelete(TestCase):
 
         # Get message from context
         msg = [m.message for m in get_messages(request.wsgi_request)]
-        msg_level = [m.level for m in get_messages(request).wsgi_request]
+        msg_level = [m.level for m in get_messages(request.wsgi_request)]
         self.assertEqual(len(msg), 1)
         self.assertIn(messages.ERROR, msg_level)
 

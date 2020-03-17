@@ -44,6 +44,7 @@ class TestClearClipboard(TestCase):
         self.client.force_login(self.central_manager.user)
 
     def test_when_not_logged(self):
+        self.client.logout()
         response = self.client.post(self.url)
         self.assertRedirects(response, "/login/?next={}".format(self.url))
 

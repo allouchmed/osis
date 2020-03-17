@@ -64,9 +64,10 @@ class MyOsisViewTestCase(TestCase):
                                                               learning_container_year=cls.learning_container_year)
         cls.attribution = AttributionFactory(learning_unit_year=cls.learning_unit_year, summary_responsible=True,
                                              tutor=cls.tutor)
+        cls.template_profile = 'my_osis/profile.html'
 
     def setUp(self):
-        self.client.force_login(self.a_superuser)
+        self.client.force_login(self.person.user)
 
     @staticmethod
     def get_message_history():
@@ -103,7 +104,7 @@ class MyOsisViewTestCase(TestCase):
         from base.views.my_osis import profile
         response = self.client.get(reverse(profile))
 
-        self.assertTemplateUsed(response, 'my_osis/profile.html')
+        self.assertTemplateUsed(response, self.template_profile)
         with self.assertRaises(KeyError):
             response.context['tab_attribution_on']
 
@@ -113,7 +114,7 @@ class MyOsisViewTestCase(TestCase):
         from base.views.my_osis import profile_attributions
         response = self.client.get(reverse(profile_attributions))
 
-        self.assertTemplateUsed(response, 'my_osis/profile.html')
+        self.assertTemplateUsed(response, self.template_profile)
         self.assertEqual(response.context['tab_attribution_on'], True)
         self.check_context_data(response.context)
 
@@ -140,7 +141,7 @@ class MyOsisViewTestCase(TestCase):
         }
         response = self.client.post(reverse('profile_lang'), data)
 
-        self.assertTemplateUsed(response, 'my_osis/profile.html')
+        self.assertTemplateUsed(response, self.template_profile)
         self.assertEqual(response.context['person'].language, LANGUAGE_CODE_EN)
 
     def get_request(self):

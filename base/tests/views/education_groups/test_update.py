@@ -63,6 +63,7 @@ from base.tests.factories.organization import OrganizationFactory
 from base.tests.factories.organization_address import OrganizationAddressFactory
 from base.tests.factories.person import PersonFactory, PersonWithPermissionsFactory
 from base.tests.factories.person_entity import PersonEntityFactory
+from base.tests.factories.program_manager import ProgramManagerFactory
 from base.tests.factories.user import SuperUserFactory
 from base.utils.cache import ElementCache
 from base.views.education_groups.update import _get_success_redirect_url, update_education_group
@@ -1169,12 +1170,12 @@ class TestCertificateAimView(TestCase):
     def setUpClass(cls):
         super().setUpClass()
         cls.academic_year = AcademicYearFactory(year=2019)
-        cls.training = TrainingFactory(academic_year=cls.academic_year)
-
         cls.program_manager = PersonWithPermissionsFactory('can_access_education_group', groups=[PROGRAM_MANAGER_GROUP])
 
     def setUp(self):
         super().setUp()
+        self.training = TrainingFactory(academic_year=self.academic_year)
+        ProgramManagerFactory(education_group=self.training.education_group, person=self.program_manager)
         self.url = reverse("update_education_group", kwargs={
             "root_id": self.training.pk,
             "education_group_year_id": self.training.pk
