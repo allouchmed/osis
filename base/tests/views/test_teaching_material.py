@@ -26,7 +26,6 @@
 from unittest import mock
 
 from django.contrib import messages
-from django.contrib.auth.models import Permission
 from django.http import HttpResponseNotAllowed, HttpResponse
 from django.http import HttpResponseRedirect
 from django.test import TestCase
@@ -60,7 +59,7 @@ class TeachingMaterialCreateTestCase(TestCase):
             learning_unit=learning_unit
         )
         cls.url = reverse('teaching_material_create', kwargs={'learning_unit_year_id': cls.learning_unit_year.id})
-        cls.person = _get_central_manager_person_with_permission()
+        cls.person = CentralManagerFactory("can_edit_learningunit_pedagogy")
 
     def setUp(self):
         self.client.force_login(self.person.user)
@@ -166,7 +165,7 @@ class TeachingMaterialUpdateTestCase(TestCase):
             LearningUnitYearFactory(subtype=FULL, academic_year=acy)
             for acy in ([cls.current_academic_year] + cls.future_academic_years)
         ]
-        cls.person = _get_central_manager_person_with_permission()
+        cls.person = CentralManagerFactory("can_edit_learningunit_pedagogy")
 
     def setUp(self):
         self.teaching_material = TeachingMaterialFactory(learning_unit_year=self.learning_unit_year)
@@ -215,7 +214,7 @@ class TeachingMaterialDeleteTestCase(TestCase):
             LearningUnitYearFactory(subtype=FULL, academic_year=acy)
             for acy in ([cls.current_academic_year] + cls.future_academic_years)
         ]
-        cls.person = _get_central_manager_person_with_permission()
+        cls.person = CentralManagerFactory("can_edit_learningunit_pedagogy")
 
     def setUp(self):
         self.teaching_material = TeachingMaterialFactory(learning_unit_year=self.learning_unit_year)
@@ -252,10 +251,3 @@ class TeachingMaterialDeleteTestCase(TestCase):
         self.assertFalse(
             TeachingMaterial.objects.filter(id=self.teaching_material.id).exists()
         )
-
-
-def _get_central_manager_person_with_permission():
-    perm_codename = "can_edit_learningunit_pedagogy"
-    person = CentralManagerFactory()
-    person.user.user_permissions.add(Permission.objects.get(codename=perm_codename))
-    return person

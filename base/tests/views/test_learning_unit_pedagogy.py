@@ -40,7 +40,7 @@ from base.models.enums import academic_calendar_type, entity_type
 from base.models.enums import organization_type
 from base.models.enums.learning_unit_year_subtypes import FULL
 from base.tests.factories.academic_calendar import AcademicCalendarFactory
-from base.tests.factories.academic_year import create_current_academic_year, AcademicYearFactory
+from base.tests.factories.academic_year import AcademicYearFactory
 from base.tests.factories.business.learning_units import GenerateAcademicYear
 from base.tests.factories.entity_version import EntityVersionFactory
 from base.tests.factories.learning_unit_year import LearningUnitYearFactory
@@ -63,7 +63,7 @@ class LearningUnitPedagogyTestCase(TestCase):
     def setUpTestData(cls):
         now = datetime.datetime.now()
 
-        cls.academic_year = create_current_academic_year()
+        cls.academic_year = AcademicYearFactory(current=True)
         cls.old_academic_year = AcademicYearFactory(year=cls.academic_year.year - 1)
         cls.next_academic_year = AcademicYearFactory(year=cls.academic_year.year + 1)
         cls.previous_academic_year = GenerateAcademicYear(
@@ -318,7 +318,7 @@ class LearningUnitPedagogyEditTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
         now = datetime.datetime.now()
-        cls.academic_year = create_current_academic_year()
+        cls.academic_year = AcademicYearFactory(current=True)
         cls.previous_academic_year = AcademicYearFactory(year=cls.academic_year.year - 1)
         cls.next_academic_year = AcademicYearFactory(year=cls.academic_year.year + 1)
         AcademicCalendarFactory(
@@ -470,7 +470,7 @@ class LearningUnitPedagogyEditTestCase(TestCase):
 class LearningUnitPedagogySummaryLockedTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
-        cls.current_academic_year = create_current_academic_year()
+        cls.current_academic_year = AcademicYearFactory(current=True)
         cls.faculty_person = FacultyManagerFactory('can_access_learningunit')
         cls.learning_unit_year = LearningUnitYearFactory(
             academic_year=cls.current_academic_year,

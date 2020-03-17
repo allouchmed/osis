@@ -28,7 +28,6 @@ from unittest import mock
 
 from django.contrib import messages
 from django.contrib.auth.models import Permission
-from django.contrib.messages.storage.fallback import FallbackStorage
 from django.core.exceptions import PermissionDenied
 from django.http import JsonResponse
 from django.test import TestCase, RequestFactory
@@ -42,19 +41,16 @@ from base.forms.learning_achievement import LearningAchievementEditForm
 from base.models.enums import learning_unit_year_subtypes
 from base.models.learning_achievement import LearningAchievement
 from base.models.learning_unit_year import LearningUnitYear
-from base.tests.factories.academic_year import create_current_academic_year, AcademicYearFactory
+from base.tests.factories.academic_year import AcademicYearFactory
 from base.tests.factories.entity_version import EntityVersionFactory
 from base.tests.factories.learning_achievement import LearningAchievementFactory
 from base.tests.factories.learning_component_year import LearningComponentYearFactory
-from base.tests.factories.learning_container import LearningContainerFactory
 from base.tests.factories.learning_container_year import LearningContainerYearFactory
 from base.tests.factories.learning_unit import LearningUnitFactory
 from base.tests.factories.learning_unit_year import LearningUnitYearFactory
 from base.tests.factories.person import PersonFactory, PersonWithPermissionsFactory
 from base.tests.factories.person_entity import PersonEntityFactory
 from base.tests.factories.proposal_learning_unit import ProposalLearningUnitFactory
-from base.tests.factories.user import SuperUserFactory
-from base.tests.factories.user import UserFactory
 from base.tests.factories.utils.get_messages import get_messages_from_response
 from base.views.learning_achievement import management, create, create_first
 from cms.tests.factories.text_label import TextLabelFactory
@@ -64,105 +60,97 @@ from reference.tests.factories.language import LanguageFactory
 
 @override_flag('learning_achievement_update', active=True)
 class TestLearningAchievementView(TestCase):
-    def setUp(self):
-        self.language_fr = LanguageFactory(code="FR")
-        self.language_en = LanguageFactory(code="EN")
-        self.user = UserFactory()
-        self.person = PersonFactory(user=self.user)
-        self.person_entity = PersonEntityFactory(person=self.person)
+    @classmethod
+    def setUpTestData(cls):
+        cls.language_fr = LanguageFactory(code="FR")
+        cls.language_en = LanguageFactory(code="EN")
+        cls.person = PersonFactory()
+        cls.person_entity = PersonEntityFactory(person=cls.person)
 
-        self.academic_year = create_current_academic_year()
-        self.learning_unit_year = LearningUnitYearFactory(
-            academic_year=self.academic_year,
+        cls.academic_year = AcademicYearFactory(current=True)
+        cls.learning_unit_year = LearningUnitYearFactory(
+            academic_year=cls.academic_year,
             subtype=learning_unit_year_subtypes.FULL,
-            learning_container_year__requirement_entity=self.person_entity.entity,
+            learning_container_year__requirement_entity=cls.person_entity.entity,
         )
-        self.client.force_login(self.user)
+
+        cls.achievement_en = LearningAchievementFactory(
+            language=cls.language_en,
+            learning_unit_year=cls.learning_unit_year,
+            order=0
+        )
+        cls.reverse_learning_unit_yr = reverse('learning_unit', args=[cls.learning_unit_year.id])
+        flag, created = Flag.objects.get_or_create(name='learning_achievement_update')
+        flag.users.add(cls.person.user)
+        cls.request_factory = RequestFactory()
+
+    def setUp(self):
         self.achievement_fr = LearningAchievementFactory(
             language=self.language_fr,
             learning_unit_year=self.learning_unit_year,
-            order=0
-        )
-        self.achievement_en = LearningAchievementFactory(
-            language=self.language_en,
-            learning_unit_year=self.learning_unit_year,
             order=0,
-            code_name=self.achievement_fr.code_name
+            code_name=self.achievement_en.code_name
         )
-        self.reverse_learning_unit_yr = reverse('learning_unit', args=[self.learning_unit_year.id])
-        flag, created = Flag.objects.get_or_create(name='learning_achievement_update')
-        flag.users.add(self.user)
-        self.request_factory = RequestFactory()
+        self.client.force_login(self.person.user)
 
     def test_operation_method_not_allowed(self):
-        request = self.request_factory.post(
+        response = self.client.post(
             reverse('achievement_management', args=[self.achievement_fr.learning_unit_year.id]),
             data={'achievement_id': self.achievement_fr.id, 'action': DELETE}
         )
-        request.user = self.user
-        setattr(request, 'session', 'session')
-        messages = FallbackStorage(request)
-        setattr(request, '_messages', messages)
         with self.assertRaises(PermissionDenied):
-            management(request, self.achievement_fr.learning_unit_year.id)
+            management(response.wsgi_request, self.achievement_fr.learning_unit_year.id)
 
     def test_delete_redirection(self):
-        request = self.request_factory.post(
+        request = self.client.post(
             reverse('achievement_management', args=[self.achievement_fr.learning_unit_year.id]),
             data={'achievement_id': self.achievement_fr.id, 'action': DELETE}
         )
-        setattr(request, 'session', 'session')
-        messages = FallbackStorage(request)
-        setattr(request, '_messages', messages)
-        self.user.user_permissions.add(Permission.objects.get(codename="can_access_learningunit"))
-        self.user.user_permissions.add(Permission.objects.get(codename="can_create_learningunit"))
-        request.user = self.user
-        response = management(request, self.achievement_fr.learning_unit_year.id)
+
+        self.person.user.user_permissions.add(Permission.objects.get(codename="can_access_learningunit"))
+        self.person.user.user_permissions.add(Permission.objects.get(codename="can_create_learningunit"))
+        request.wsgi_request.user = self.person.user
+        response = management(request.wsgi_request, self.achievement_fr.learning_unit_year.id)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url,
                          "/learning_units/{}/specifications/".format(self.achievement_fr.learning_unit_year.id))
 
     def test_delete_permission_denied(self):
         self.person_entity.delete()
-        request = self.request_factory.post(reverse('achievement_management',
-                                               args=[self.achievement_fr.learning_unit_year.id]),
-                                       data={'achievement_id': self.achievement_fr.id,
-                                             'action': DELETE})
-        self.user.user_permissions.add(Permission.objects.get(codename="can_access_learningunit"))
-        self.user.user_permissions.add(Permission.objects.get(codename="can_create_learningunit"))
-        request.user = self.user
+        response = self.client.post(reverse('achievement_management',
+                                            args=[self.achievement_fr.learning_unit_year.id]),
+                                    data={'achievement_id': self.achievement_fr.id,
+                                          'action': DELETE})
+        self.person.user.user_permissions.add(Permission.objects.get(codename="can_access_learningunit"))
+        self.person.user.user_permissions.add(Permission.objects.get(codename="can_create_learningunit"))
 
         with self.assertRaises(PermissionDenied):
-            management(request, self.achievement_fr.learning_unit_year.id)
+            management(response.wsgi_request, self.achievement_fr.learning_unit_year.id)
 
     def test_create_not_allowed(self):
-        request = self.request_factory.get(self.reverse_learning_unit_yr)
-        request.user = self.user
+        response = self.client.get(self.reverse_learning_unit_yr)
 
         with self.assertRaises(PermissionDenied):
-            create(request, self.learning_unit_year.id, self.achievement_fr.id)
+            create(response.wsgi_request, self.learning_unit_year.id, self.achievement_fr.id)
 
-        request = self.request_factory.post(self.reverse_learning_unit_yr)
-        request.user = self.user
+        response = self.client.post(self.reverse_learning_unit_yr)
 
         with self.assertRaises(PermissionDenied):
-            create(request, self.learning_unit_year.id, self.achievement_fr.id)
+            create(response.wsgi_request, self.learning_unit_year.id, self.achievement_fr.id)
 
     def test_create_first_not_allowed(self):
-        request = self.request_factory.get(self.reverse_learning_unit_yr)
-        request.user = self.user
+        response = self.client.get(self.reverse_learning_unit_yr)
 
         with self.assertRaises(PermissionDenied):
-            create_first(request, self.learning_unit_year.id)
+            create_first(response.wsgi_request, self.learning_unit_year.id)
 
-        request = self.request_factory.post(self.reverse_learning_unit_yr)
-        request.user = self.user
+        response = self.client.post(self.reverse_learning_unit_yr)
 
         with self.assertRaises(PermissionDenied):
-            create_first(request, self.learning_unit_year.id)
+            create_first(response.wsgi_request, self.learning_unit_year.id)
 
     def test_check_achievement_code(self):
-        self.user.user_permissions.add(Permission.objects.get(codename="can_access_learningunit"))
+        self.person.user.user_permissions.add(Permission.objects.get(codename="can_access_learningunit"))
         url = reverse('achievement_check_code', args=[self.learning_unit_year.id])
         response = self.client.get(url, data={'code': self.achievement_fr.code_name})
         self.assertEqual(type(response), JsonResponse)
@@ -173,14 +161,12 @@ class TestLearningAchievementActions(TestCase):
     def setUpTestData(cls):
         cls.language_fr = LanguageFactory(code="FR")
         cls.language_en = LanguageFactory(code="EN")
-        cls.user = UserFactory()
-        cls.person = PersonWithPermissionsFactory("can_access_learningunit", "can_create_learningunit", user=cls.user)
-        cls.a_superuser = SuperUserFactory()
-        cls.superperson = PersonFactory(user=cls.a_superuser)
+        cls.person = PersonWithPermissionsFactory("can_access_learningunit", "can_create_learningunit")
+        cls.superperson = PersonFactory(user__superuser=True)
 
         cls.person_entity = PersonEntityFactory(person=cls.superperson)
 
-        cls.academic_year = create_current_academic_year()
+        cls.academic_year = AcademicYearFactory(current=True)
         AcademicYearFactory.produce_in_future(quantity=2)
         cls.luy = LearningUnitYearFactory(
             academic_year=cls.academic_year,
@@ -191,9 +177,10 @@ class TestLearningAchievementActions(TestCase):
             academic_year=cls.academic_year.next(),
             learning_unit=cls.luy.learning_unit,
         )
+        cls.template_naem = 'learning_unit/achievement_edit.html'
 
     def setUp(self):
-        self.client.force_login(self.a_superuser)
+        self.client.force_login(self.superperson.user)
 
     def test_delete(self):
         achievements = [
@@ -209,7 +196,7 @@ class TestLearningAchievementActions(TestCase):
     def test_up(self):
         achievements = [
             LearningAchievementFactory(code_name=code, language=lang, learning_unit_year=self.luy, consistency_id=code)
-            for code in [1,2] for lang in [self.language_fr, self.language_en]
+            for code in [1, 2] for lang in [self.language_fr, self.language_en]
         ]
         self.client.post(
             reverse('achievement_management', args=[self.luy.id]),
@@ -223,7 +210,7 @@ class TestLearningAchievementActions(TestCase):
     def test_down(self):
         achievements = [
             LearningAchievementFactory(code_name=code, language=lang, learning_unit_year=self.luy, consistency_id=code)
-            for code in [1,2] for lang in [self.language_fr, self.language_en]
+            for code in [1, 2] for lang in [self.language_fr, self.language_en]
         ]
         self.client.post(
             reverse('achievement_management', args=[self.luy.id]),
@@ -240,7 +227,7 @@ class TestLearningAchievementActions(TestCase):
             reverse('achievement_edit', args=[self.luy.id, learning_achievement.id]),
             data={'achievement_id': learning_achievement.id}
         )
-        self.assertTemplateUsed(response, 'learning_unit/achievement_edit.html')
+        self.assertTemplateUsed(response, self.template_naem)
         self.assertIsInstance(response.context['form'], LearningAchievementEditForm)
 
     def test_learning_achievement_simple_save(self):
@@ -296,7 +283,7 @@ class TestLearningAchievementActions(TestCase):
             language=self.language_fr,
             consistency_id=1
         )
-        learning_achievement_en = LearningAchievementFactory(
+        LearningAchievementFactory(
             code_name=1,
             learning_unit_year=self.luy,
             language=self.language_en,
@@ -326,7 +313,7 @@ class TestLearningAchievementActions(TestCase):
             reverse('achievement_create', args=[self.luy.id, achievement_fr.id]),
             data={'language_code': self.language_fr.code}
         )
-        self.assertTemplateUsed(response, 'learning_unit/achievement_edit.html')
+        self.assertTemplateUsed(response, self.template_naem)
         context = response.context
         self.assertIsInstance(context['form'], LearningAchievementEditForm)
         self.assertEqual(context['learning_unit_year'], self.luy)
@@ -338,21 +325,21 @@ class TestLearningAchievementActions(TestCase):
         future_achievement_fr = LearningAchievementFactory(
             language=self.language_fr,
             learning_unit_year=self.future_luy,
-            consistency_id=achievement_fr.consistency_id+1
+            consistency_id=achievement_fr.consistency_id + 1
         )
         response = self.client.get(
             reverse('achievement_create', args=[self.luy.id, achievement_fr.id]),
             data={'language_code': self.language_fr.code}
         )
-        self.assertTemplateUsed(response, 'learning_unit/achievement_edit.html')
+        self.assertTemplateUsed(response, self.template_naem)
         self.assertIsInstance(response.context['form'], LearningAchievementEditForm)
-        self.assertEqual(response.context['form'].consistency_id, future_achievement_fr.consistency_id+1)
+        self.assertEqual(response.context['form'].consistency_id, future_achievement_fr.consistency_id + 1)
 
     def test_learning_achievement_create_first(self):
         response = self.client.get(reverse('achievement_create_first', args=[self.luy.id]),
                                    data={'language_code': FR_CODE_LANGUAGE})
 
-        self.assertTemplateUsed(response, 'learning_unit/achievement_edit.html')
+        self.assertTemplateUsed(response, self.template_naem)
         context = response.context
         self.assertIsInstance(context['form'], LearningAchievementEditForm)
         self.assertEqual(context['learning_unit_year'], self.luy)
@@ -361,9 +348,9 @@ class TestLearningAchievementActions(TestCase):
     def test_learning_achievement_create_first_existing_learning_achievement_in_future(self):
         future_achievement = LearningAchievementFactory(learning_unit_year=self.future_luy)
         response = self.client.get(reverse('achievement_create_first', args=[self.luy.id]))
-        self.assertTemplateUsed(response, 'learning_unit/achievement_edit.html')
+        self.assertTemplateUsed(response, self.template_naem)
         self.assertIsInstance(response.context['form'], LearningAchievementEditForm)
-        self.assertEqual(response.context['form'].consistency_id, future_achievement.consistency_id+1)
+        self.assertEqual(response.context['form'].consistency_id, future_achievement.consistency_id + 1)
 
 
 class TestLearningAchievementPostponement(TestCase):
@@ -371,22 +358,19 @@ class TestLearningAchievementPostponement(TestCase):
     def setUpTestData(cls):
         cls.language_fr = LanguageFactory(code="FR")
         cls.language_en = LanguageFactory(code="EN")
-        cls.user = UserFactory()
-        flag, created = Flag.objects.get_or_create(name='learning_achievement_update')
-        flag.users.add(cls.user)
-        cls.person = PersonWithPermissionsFactory("can_access_learningunit", "can_create_learningunit", user=cls.user)
+        cls.person = PersonWithPermissionsFactory("can_access_learningunit", "can_create_learningunit")
         cls.person_entity = PersonEntityFactory(person=cls.person)
+        flag, created = Flag.objects.get_or_create(name='learning_achievement_update')
+        flag.users.add(cls.person.user)
         EntityVersionFactory(entity=cls.person_entity.entity)
         cls.academic_years = AcademicYearFactory.produce_in_future(quantity=5)
-        cls.max_la_number = 2*len(cls.academic_years)
+        cls.max_la_number = 2 * len(cls.academic_years)
         cls.learning_unit = LearningUnitFactory(start_year=cls.academic_years[0], end_year=cls.academic_years[-1])
-        cls.learning_container = LearningContainerFactory()
         cls.learning_unit_years = [LearningUnitYearFactory(
             academic_year=academic_year,
             subtype=learning_unit_year_subtypes.FULL,
             learning_container_year=LearningContainerYearFactory(
                 academic_year=academic_year,
-                learning_container=cls.learning_container,
                 requirement_entity=cls.person_entity.entity
             ),
             learning_unit=cls.learning_unit,
@@ -398,15 +382,14 @@ class TestLearningAchievementPostponement(TestCase):
 
     def setUp(self):
         self.client.force_login(self.person.user)
+        self.create_response = self._create_achievements()
 
     def test_learning_achievement_create_with_postponement(self):
-        create_response = self._create_achievements(code_name=1)
-        self.assertEqual(create_response.status_code, 200)
+        self.assertEqual(self.create_response.status_code, 200)
         for achievement in LearningAchievement.objects.filter(language__code=FR_CODE_LANGUAGE):
             self.assertEqual(achievement.text, 'text')
 
     def test_learning_achievement_deletion_with_postponement(self):
-        self._create_achievements(code_name=1)
         achievement = LearningAchievement.objects.filter(
             learning_unit_year=self.learning_unit_years[0],
             language__code=FR_CODE_LANGUAGE
@@ -419,20 +402,20 @@ class TestLearningAchievementPostponement(TestCase):
         self.assertFalse(LearningAchievement.objects.all().exists())
 
     def test_learning_achievement_move_up_with_postponement(self):
-        self._create_ordered_achievements([1, 2])
+        self._create_ordered_achievements([2])
         self._move_achievement(consistency_id=2, operation=UP)
         self.assertEqual(LearningAchievement.objects.filter(consistency_id=1, order=1).count(), self.max_la_number)
         self.assertEqual(LearningAchievement.objects.filter(consistency_id=2, order=0).count(), self.max_la_number)
 
     def test_learning_achievement_move_down_with_postponement(self):
-        self._create_ordered_achievements([1, 2])
+        self._create_ordered_achievements([2])
         self._move_achievement(consistency_id=1, operation=DOWN)
         self.assertEqual(LearningAchievement.objects.filter(consistency_id=1, order=1).count(), self.max_la_number)
         self.assertEqual(LearningAchievement.objects.filter(consistency_id=2, order=0).count(), self.max_la_number)
 
     def test_learning_achievement_stop_postponement_when_future_order_is_different(self):
-        self._create_ordered_achievements([1, 2])
-        last_postponed_luy = self.learning_unit_years[-2]
+        self._create_ordered_achievements([2])
+        last_postponed_luy = self.learning_unit_years[-1]
         for la in LearningAchievement.objects.filter(order=0, learning_unit_year=self.learning_unit_years[-1]):
             la.to(1)
         response = self._move_achievement(consistency_id=1, operation=DOWN)
@@ -442,23 +425,23 @@ class TestLearningAchievementPostponement(TestCase):
     def test_no_learning_unit_year_is_created_after_postponement(self):
         self.learning_unit_years.pop().delete()
         self.learning_component_years.pop().delete()
-        create_response = self._create_achievements(code_name=1)
-        self.assertEqual(create_response.status_code, 200)
+        self.assertEqual(self.create_response.status_code, 200)
         self.assertFalse(LearningUnitYear.objects.filter(academic_year=self.academic_years[-1]).exists())
 
-    def _create_achievements(self, code_name):
+    def _create_achievements(self):
         create_url = reverse('achievement_create_first', args=[self.learning_unit_years[0].id])
         create_response = self.client.post(create_url, data={
             'language_code': FR_CODE_LANGUAGE,
             'text_fr': 'text',
             'postpone': '1',
-            'consistency_id': 1
+            'consistency_id': 1,
+            'order': 0
         })
         return create_response
 
     def _create_ordered_achievements(self, ids):
         for luy, id, lang in itertools.product(self.learning_unit_years, ids, [self.language_fr, self.language_en]):
-            LearningAchievementFactory(consistency_id=id, learning_unit_year=luy, language=lang, order=id-1)
+            LearningAchievementFactory(consistency_id=id, learning_unit_year=luy, language=lang, order=id - 1)
 
     def _move_achievement(self, consistency_id, operation):
         operation_url = reverse('achievement_management', args=[self.learning_unit_years[0].id])

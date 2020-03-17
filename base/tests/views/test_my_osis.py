@@ -32,12 +32,11 @@ from django.urls import reverse
 from attribution.tests.factories.attribution import AttributionFactory
 from base.models.enums import academic_calendar_type
 from base.tests.factories.academic_calendar import AcademicCalendarFactory
-from base.tests.factories.academic_year import create_current_academic_year
+from base.tests.factories.academic_year import AcademicYearFactory
 from base.tests.factories.learning_container_year import LearningContainerYearFactory
 from base.tests.factories.learning_unit_year import LearningUnitYearFakerFactory
 from base.tests.factories.person import PersonFactory
 from base.tests.factories.tutor import TutorFactory
-from base.tests.factories.user import SuperUserFactory
 from osis_common.models import message_history
 
 LANGUAGE_CODE_FR = 'fr-be'
@@ -49,10 +48,9 @@ class MyOsisViewTestCase(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.a_superuser = SuperUserFactory()
-        cls.person = PersonFactory(user=cls.a_superuser,
+        cls.person = PersonFactory(user__superuser=True,
                                    language=LANGUAGE_CODE_FR)
-        academic_year = create_current_academic_year()
+        academic_year = AcademicYearFactory(current=True)
         cls.summary_course_submission_calendar = AcademicCalendarFactory(
             academic_year=academic_year,
             start_date=academic_year.start_date,

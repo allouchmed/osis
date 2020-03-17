@@ -68,10 +68,10 @@ from base.tests.factories.learning_unit import LearningUnitFactory
 from base.tests.factories.learning_unit_year import LearningUnitYearFactory
 from base.tests.factories.learning_unit_year import LearningUnitYearFakerFactory
 from base.tests.factories.organization import OrganizationFactory
+from base.tests.factories.person import PersonWithPermissionsFactory
 from base.tests.factories.person_entity import PersonEntityFactory
 from base.tests.factories.proposal_learning_unit import ProposalLearningUnitFactory
 from base.tests.factories.tutor import TutorFactory
-from base.tests.factories.user import UserFactory
 from base.views.learning_units.proposal.update import update_learning_unit_proposal, \
     learning_unit_modification_proposal, learning_unit_suppression_proposal
 from base.views.learning_units.search.proposal import ACTION_CONSOLIDATE, ACTION_BACK_TO_INITIAL, ACTION_FORCE_STATE
@@ -88,7 +88,7 @@ class TestLearningUnitModificationProposal(TestCase):
         cls.person = person_factory.PersonWithPermissionsFactory("can_propose_learningunit", "can_access_learningunit")
 
         an_organization = OrganizationFactory(type=organization_type.MAIN)
-        current_academic_year = create_current_academic_year()
+        current_academic_year = AcademicYearFactory(current=True)
         an_entity = EntityFactory(organization=an_organization)
         cls.entity_version = EntityVersionFactory(entity=an_entity, entity_type=entity_type.FACULTY,
                                                   start_date=current_academic_year.start_date,
@@ -498,7 +498,7 @@ class TestGroupActionsOnProposals(TestCase):
 class TestLearningUnitProposalCancellation(TestCase):
     @classmethod
     def setUpTestData(cls):
-        create_current_academic_year()
+        AcademicYearFactory(current=True)
         cls.person = person_factory.FacultyManagerFactory("can_propose_learningunit")
         cls.permission = Permission.objects.get(codename="can_propose_learningunit")
 
@@ -533,13 +533,12 @@ class TestLearningUnitProposalCancellation(TestCase):
         self.assertTemplateUsed(response, "page_not_found.html")
 
     def test_with_none_person(self):
-        user = UserFactory()
-        user.user_permissions.add(self.permission)
-        self.client.force_login(user)
+        person = PersonWithPermissionsFactory(self.permission.codename)
+        self.client.force_login(person.user)
         response = self.client.get(self.url)
 
-        self.assertEqual(response.status_code, HttpResponseNotFound.status_code)
-        self.assertTemplateUsed(response, "page_not_found.html")
+        self.assertEqual(response.status_code, HttpResponseForbidden.status_code)
+        self.assertTemplateUsed(response, "access_denied.html")
 
     def test_with_no_proposal(self):
         self.learning_unit_proposal.delete()
@@ -735,7 +734,7 @@ class TestEditProposal(TestCase):
         self.assertTemplateUsed(response, 'access_denied.html')
 
     def test_edit_proposal_get_regular_user_with_permission(self):
-        person = person_factory.PersonWithPermissionsFactory("can_edit_learning_unit_proposal")
+        person = PersonWithPermissionsFactory("can_edit_learning_unit_proposal")
         self.client.force_login(person.user)
         response = self.client.get(self.url)
 

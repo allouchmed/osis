@@ -44,14 +44,14 @@ from base.models.enums.academic_calendar_type import LEARNING_UNIT_EDITION_FACUL
 from base.models.enums.organization_type import MAIN, ACADEMIC_PARTNER
 from base.tests.factories.academic_calendar import AcademicCalendarFactory, \
     generate_learning_unit_edition_calendars
-from base.tests.factories.academic_year import create_current_academic_year, AcademicYearFactory, get_current_year
+from base.tests.factories.academic_year import AcademicYearFactory, get_current_year
 from base.tests.factories.business.learning_units import LearningUnitsMixin, GenerateContainer, GenerateAcademicYear
 from base.tests.factories.campus import CampusFactory
 from base.tests.factories.entity_version import EntityVersionFactory
 from base.tests.factories.learning_container_year import LearningContainerYearFactory
 from base.tests.factories.learning_unit_year import LearningUnitYearFactory
 from base.tests.factories.organization import OrganizationFactory
-from base.tests.factories.person import PersonFactory, CentralManagerFactory
+from base.tests.factories.person import PersonFactory, CentralManagerFactory, PersonWithPermissionsFactory
 from base.tests.factories.person_entity import PersonEntityFactory
 from base.tests.factories.proposal_learning_unit import ProposalLearningUnitFactory
 from base.tests.factories.user import UserFactory, SuperUserFactory
@@ -67,10 +67,7 @@ class TestLearningUnitEditionView(TestCase, LearningUnitsMixin):
     @classmethod
     def setUpTestData(cls):
         super().setUpTestData()
-        cls.user = UserFactory(username="YodaTheJediMaster")
-        cls.person = CentralManagerFactory(user=cls.user)
-        cls.permission = Permission.objects.get(codename="can_edit_learningunit_date")
-        cls.person.user.user_permissions.add(cls.permission)
+        cls.person = CentralManagerFactory("can_edit_learningunit_date")
         cls.setup_academic_years()
         cls.learning_unit = cls.setup_learning_unit(cls.starting_academic_year)
         cls.learning_container_year = cls.setup_learning_container_year(
@@ -85,12 +82,10 @@ class TestLearningUnitEditionView(TestCase, LearningUnitsMixin):
             learning_unit_year_periodicity.ANNUAL
         )
 
-        cls.a_superuser = SuperUserFactory()
-        cls.a_superperson = PersonFactory(user=cls.a_superuser)
         generate_learning_unit_edition_calendars(cls.list_of_academic_years)
 
     def setUp(self):
-        self.client.force_login(self.user)
+        self.client.force_login(self.person.user)
 
     def test_view_learning_unit_edition_permission_denied(self):
         response = self.client.get(reverse(learning_unit_edition_end_date, args=[self.learning_unit_year.id]))
@@ -129,7 +124,7 @@ class TestEditLearningUnit(TestCase):
     @classmethod
     def setUpTestData(cls):
         today = datetime.date.today()
-        cls.an_academic_year = create_current_academic_year()
+        cls.an_academic_year = AcademicYearFactory(current=True)
         generate_learning_unit_edition_calendars([cls.an_academic_year])
 
         cls.requirement_entity = EntityVersionFactory(
@@ -161,17 +156,6 @@ class TestEditLearningUnit(TestCase):
             additional_entity_2=cls.additional_entity_2.entity,
         )
 
-        cls.learning_unit_year = LearningUnitYearFactory(
-            learning_container_year=cls.learning_container_year,
-            acronym="LOSIS4512",
-            academic_year=cls.an_academic_year,
-            subtype=learning_unit_year_subtypes.FULL,
-            attribution_procedure=attribution_procedure.INTERNAL_TEAM,
-            credits=15,
-            campus=CampusFactory(organization=OrganizationFactory(type=organization_type.MAIN)),
-            internship_subtype=None,
-        )
-
         cls.partim_learning_unit = LearningUnitYearFactory(
             learning_container_year=cls.learning_container_year,
             acronym="LOSIS4512A",
@@ -181,18 +165,25 @@ class TestEditLearningUnit(TestCase):
             campus=CampusFactory(organization=OrganizationFactory(type=organization_type.MAIN))
         )
 
-        person = CentralManagerFactory()
+        cls.person = CentralManagerFactory("can_edit_learningunit", "can_access_learningunit")
         PersonEntityFactory(
             entity=cls.requirement_entity.entity,
-            person=person
+            person=cls.person
         )
-        cls.user = person.user
-        cls.user.user_permissions.add(Permission.objects.get(codename="can_edit_learningunit"),
-                                      Permission.objects.get(codename="can_access_learningunit"))
-        cls.url = reverse(update_learning_unit, args=[cls.learning_unit_year.id])
 
     def setUp(self):
-        self.client.force_login(self.user)
+        self.client.force_login(self.person.user)
+        self.learning_unit_year = LearningUnitYearFactory(
+            learning_container_year=self.learning_container_year,
+            acronym="LOSIS4512",
+            academic_year=self.an_academic_year,
+            subtype=learning_unit_year_subtypes.FULL,
+            attribution_procedure=attribution_procedure.INTERNAL_TEAM,
+            credits=15,
+            campus=CampusFactory(organization=OrganizationFactory(type=organization_type.MAIN)),
+            internship_subtype=None,
+        )
+        self.url = reverse(update_learning_unit, args=[self.learning_unit_year.id])
 
     def test_user_not_logged(self):
         self.client.logout()
@@ -219,14 +210,13 @@ class TestEditLearningUnit(TestCase):
         self.assertEqual(response.status_code, HttpResponseNotFound.status_code)
 
     def test_user_is_not_linked_to_a_person(self):
-        user = UserFactory()
-        user.user_permissions.add(Permission.objects.get(codename="can_edit_learningunit"))
-        self.client.force_login(user)
+        person = PersonWithPermissionsFactory("can_edit_learningunit")
+        self.client.force_login(person.user)
 
         response = self.client.get(self.url)
 
-        self.assertTemplateUsed(response, "page_not_found.html")
-        self.assertEqual(response.status_code, HttpResponseNotFound.status_code)
+        self.assertTemplateUsed(response, "access_denied.html")
+        self.assertEqual(response.status_code, HttpResponseForbidden.status_code)
 
     def test_cannot_modify_past_learning_unit(self):
         past_year = datetime.date.today().year - 2
@@ -434,7 +424,7 @@ class TestLearningUnitVolumesManagement(TestCase):
         cls.learning_unit_year = cls.generated_container_year.learning_unit_year_full
         cls.learning_unit_year_partim = cls.generated_container_year.learning_unit_year_partim
 
-        cls.person = CentralManagerFactory()
+        cls.person = CentralManagerFactory("can_edit_learningunit")
 
         cls.url = reverse('learning_unit_volumes_management', kwargs={
             'learning_unit_year_id': cls.learning_unit_year.id,
@@ -455,9 +445,6 @@ class TestLearningUnitVolumesManagement(TestCase):
 
     def setUp(self):
         self.client.force_login(self.person.user)
-        self.user = self.person.user
-        edit_learning_unit_permission = Permission.objects.get(codename="can_edit_learningunit")
-        self.person.user.user_permissions.add(edit_learning_unit_permission)
 
     @mock.patch('base.models.program_manager.is_program_manager')
     def test_learning_unit_volumes_management_get_full_form(self, mock_program_manager):

@@ -64,9 +64,7 @@ class TestLearningUnitDetailView(TestCase):
         self.client.force_login(self.person.user)
 
     def test_learning_unit_read(self):
-        learning_container_year = LearningContainerYearFactory(academic_year=self.current_academic_year)
         learning_unit_year = LearningUnitYearFactory(academic_year=self.current_academic_year,
-                                                     learning_container_year=learning_container_year,
                                                      subtype=learning_unit_year_subtypes.FULL)
 
         header = {'HTTP_REFERER': SEARCH_URL_PART}
@@ -109,9 +107,7 @@ class TestLearningUnitDetailView(TestCase):
         self.assertEqual(response.context['learning_unit_year'], learning_unit_year)
 
     def test_external_learning_unit_read_permission_denied(self):
-        learning_container_year = LearningContainerYearFactory(academic_year=self.current_academic_year)
         learning_unit_year = LearningUnitYearFactory(academic_year=self.current_academic_year,
-                                                     learning_container_year=learning_container_year,
                                                      subtype=learning_unit_year_subtypes.FULL)
         external_learning_unit_year = ExternalLearningUnitYearFactory(learning_unit_year=learning_unit_year)
         learning_unit_year = external_learning_unit_year.learning_unit_year
@@ -216,19 +212,15 @@ class TestLearningUnitDetailView(TestCase):
             self.assertEqual(response.context["can_edit_date"], False)
 
     def test_get_partims_identification_tabs(self):
-        learning_unit_container_year = LearningContainerYearFactory(
-            academic_year=self.current_academic_year
-        )
         learning_unit_year = LearningUnitYearFactory(
             acronym="LCHIM1210",
-            learning_container_year=learning_unit_container_year,
             subtype=learning_unit_year_subtypes.FULL,
             academic_year=self.current_academic_year
         )
         for letter in ['A', 'B', 'F']:
             LearningUnitYearFactory(
                 acronym="LCHIM1210" + letter,
-                learning_container_year=learning_unit_container_year,
+                learning_container_year=learning_unit_year.learning_container_year,
                 subtype=learning_unit_year_subtypes.PARTIM,
                 academic_year=self.current_academic_year
             )
